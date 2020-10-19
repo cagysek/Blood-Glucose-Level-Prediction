@@ -9,11 +9,11 @@
 
 Connection::Connection()
 {
-    weight = getRandomWeight();
-    deltaWeight = 0.0;
+    weight = get_random_weight();
+    delta_weight = 0.0;
 }
 
-double Connection::getRandomWeight()
+double Connection::get_random_weight()
 {
     srand((unsigned) time(NULL));
     

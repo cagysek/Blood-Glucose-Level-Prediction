@@ -17,10 +17,10 @@ class Connection
     public:
         Connection();
         double weight;
-        double deltaWeight;
+        double delta_weight;
     
     private:
-        double getRandomWeight();
+        double get_random_weight();
     
 };
 

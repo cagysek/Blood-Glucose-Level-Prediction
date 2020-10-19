@@ -17,13 +17,13 @@
 class Layer
 {
     public:
-        void addNeuron(Neuron neuron);
-        Neuron& getNeuron(unsigned index);
-        unsigned getNeuronCount();
-        Neuron& getBias();
+        void add_neuron(Neuron neuron);
+        Neuron& get_neuron(unsigned index);
+        unsigned get_neuron_count();
+        Neuron& get_bias();
     
     private:
-        std::vector<Neuron> neurons;
+        std::vector<Neuron> m_neurons;
 };
 
 #endif /* Layer_hpp */

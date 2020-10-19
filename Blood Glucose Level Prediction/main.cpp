@@ -8,8 +8,8 @@
 #include <iostream>
 #include <vector>
 
-#include "NeuronNetwork.hpp"
-#include "DataReader.hpp"
+#include "Neuron_network.hpp"
+#include "Data_reader.hpp"
 
 void showVectorVals(const std::string& label, const std::vector<double> &v)
 {
@@ -25,20 +25,20 @@ void showVectorVals(const std::string& label, const std::vector<double> &v)
 
 int main(int argc, const char * argv[]) {
     
-    DataReader dataReader("/Users/cagy/Documents/Škola/PPR/Blood Glucose Level Prediction/Blood Glucose Level Prediction/data/asc2018.sqlite");
-    dataReader.open();
+    Data_reader data_reader("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood Glucose Level Prediction/data/asc2018.sqlite");
+    data_reader.open();
     std::vector<double> inputValues;
-    dataReader.getInputData(inputValues, 0, 8);
+    data_reader.get_input_data(inputValues, 0, 8);
     
-    dataReader.close();
-    return 0;
+    data_reader.close();
+ //   return 0;
     std::vector<unsigned> topology;
     topology.push_back(8);
     topology.push_back(16);
     topology.push_back(26);
     topology.push_back(32);
     
-    NeuronNetwork neuronNetwork(topology);
+    Neuron_network neuronNetwork(topology);
     
 
     inputValues.push_back(11.05);
@@ -59,13 +59,13 @@ int main(int argc, const char * argv[]) {
     
     while (true) {
         showVectorVals("Inputs:", inputValues);
-        neuronNetwork.feedForwardPropagation(inputValues);
+        neuronNetwork.feed_forward_propagation(inputValues);
         
         
         
         std::vector<double> resultValues;
 
-        neuronNetwork.getResults(resultValues);
+        neuronNetwork.get_results(resultValues);
         showVectorVals("Outputs:", resultValues);
         
         std::vector<double> targetValues;
@@ -109,11 +109,11 @@ int main(int argc, const char * argv[]) {
         showVectorVals("Targets:", targetValues);
         
         
-        neuronNetwork.backPropagation(targetValues);
+        neuronNetwork.back_propagation(targetValues);
         
         // Report how well the training is working, average over recent samples:
                 std::cout << "Net recent average error: "
-                        << neuronNetwork.getRecentAverageError() << std::endl;
+                        << neuronNetwork.get_recent_average_error() << std::endl;
         
         i++;
         

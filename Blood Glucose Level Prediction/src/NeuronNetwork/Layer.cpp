@@ -8,22 +8,22 @@
 #include "Layer.hpp"
 
 
-void Layer::addNeuron(Neuron neuron)
+void Layer::add_neuron(Neuron neuron)
 {
-    neurons.push_back(neuron);
+    m_neurons.push_back(neuron);
 }
 
-Neuron& Layer::getNeuron(unsigned index)
+Neuron& Layer::get_neuron(unsigned index)
 {
-    return neurons[index];
+    return m_neurons[index];
 }
 
-unsigned Layer::getNeuronCount()
+unsigned Layer::get_neuron_count()
 {
-    return (unsigned)neurons.size();
+    return (unsigned)m_neurons.size();
 }
 
-Neuron& Layer::getBias()
+Neuron& Layer::get_bias()
 {
-    return neurons.back();
+    return m_neurons.back();
 }

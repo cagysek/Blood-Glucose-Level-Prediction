@@ -18,30 +18,31 @@ class Layer;
 class Neuron
 {
 public:
-    Neuron(unsigned numberOfOutputs, unsigned neuronIndex);
-    void setOutputValue(double newOutputVal) { output = newOutputVal; };
-    double getOutputValue() { return output; }
-    void feedForward(Layer &prevLayer);
-    double getNeuronOutputWeight(unsigned index) { return outputWeights[index].weight; }
-    double getNeuronOutputDeltaWeight(unsigned index) { return outputWeights[index].deltaWeight; }
-    void calcOutputGradients(double targetVal);
-    void calcHiddenGradients(Layer &nextLayer);
-    void updateInputWeights(Layer &prevLayer);
-    void updateConnectionValues(double deltaWeight);
+    Neuron(unsigned number_of_outputs, unsigned neuron_index);
+    void set_output_value(double new_output_val) { m_output = new_output_val; };
+    double get_output_value() { return m_output; }
+    void feed_forward(Layer &prev_layer);
+    double get_neuron_output_weight(unsigned index) { return output_weights[index].weight; }
+    double get_neuron_output_delta_weight(unsigned index) { return output_weights[index].delta_weight; }
+    void calc_output_gradients(double target_Val);
+    void calc_hidden_gradients(Layer &next_layer);
+    void update_input_weights(Layer &prev_layer);
+    void update_connection_values(double delta_weight);
     
     static double ETA; // [0.0 - 1.0] - konstanta jak moc se má síť učit
     static double ALPHA; // momentum, násobič poslední změny váhy
-    unsigned neuronIndex;
-    double gradient;
     
+    unsigned m_neuronIndex;
+    double m_gradient;
 private:
-    double output;
-    std::vector<Connection> outputWeights;
+    double m_output;
     
-    static double activationFunction(double x);
-    static double activationFunctionDerivative(double x);
+    std::vector<Connection> output_weights;
     
-    double sumDOW(Layer &nextLayer);
+    static double activation_function(const double x);
+    static double activation_function_derivative(const double x);
+    
+    double sum_dow(Layer &next_layer);
     
     
 

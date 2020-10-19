@@ -5,7 +5,7 @@
 //  Created by Jan Čarnogurský on 18/10/2020.
 //
 
-#include "DataReader.hpp"
+#include "Data_reader.hpp"
 
 static int callback(void* data, int argc, char** argv, char** azColName)
 {
@@ -21,21 +21,21 @@ static int callback(void* data, int argc, char** argv, char** azColName)
 }
 
 
-DataReader::DataReader(const char *filename)
+Data_reader::Data_reader(const char *filename)
 {
-    databaseFile = filename;
+    m_database_file = filename;
 }
 
-unsigned DataReader::getInputData(std::vector<double> &inputValues, unsigned limit, unsigned offset)
+unsigned Data_reader::get_input_data(std::vector<double> &input_values, unsigned limit, unsigned offset)
 {
     
-    inputValues.clear();
+    input_values.clear();
     
     std::string data("CALLBACK FUNCTION");
   
     std::string sql("SELECT * FROM measuredvalue LIMIT 5;");
     
-    int rc = sqlite3_exec(DB, sql.c_str(), callback, (void*)data.c_str(), NULL);
+    int rc = sqlite3_exec(m_DB, sql.c_str(), callback, (void*)data.c_str(), NULL);
   
     if (rc != SQLITE_OK)
         std::cout << "Error SELECT" << std::endl;
@@ -43,19 +43,19 @@ unsigned DataReader::getInputData(std::vector<double> &inputValues, unsigned lim
         std::cout << "Operation OK!" << std::endl;
     }
     
-    return inputValues.size();
+    return input_values.size();
     
 }
 
-unsigned DataReader::getTargetData(std::vector<double> &targetValues, unsigned limit, unsigned offset)
+unsigned Data_reader::get_target_data(std::vector<double> &target_values, unsigned limit, unsigned offset)
 {
-    targetValues.clear();
+    target_values.clear();
     
     std::string data("CALLBACK FUNCTION");
   
     std::string sql("SELECT * FROM measuredvalue;");
     
-    int rc = sqlite3_exec(DB, sql.c_str(), callback, (void*)data.c_str(), NULL);
+    int rc = sqlite3_exec(m_DB, sql.c_str(), callback, (void*)data.c_str(), NULL);
   
     if (rc != SQLITE_OK)
         std::cout << "Error SELECT" << std::endl;
@@ -64,17 +64,17 @@ unsigned DataReader::getTargetData(std::vector<double> &targetValues, unsigned l
     }
     
     
-    return targetValues.size();
+    return target_values.size();
 
 }
 
-void DataReader::open()
+void Data_reader::open()
 {
     int exit = 0;
-    exit = sqlite3_open(databaseFile, &DB);
+    exit = sqlite3_open(m_database_file, &m_DB);
     
     if (exit) {
-        std::cout << "Error open DB " << sqlite3_errmsg(DB) << std::endl;
+        std::cout << "Error open DB " << sqlite3_errmsg(m_DB) << std::endl;
     }
     else
     {
@@ -84,7 +84,7 @@ void DataReader::open()
     }
 }
 
-void DataReader::close()
+void Data_reader::close()
 {
-    sqlite3_close(DB);
+    sqlite3_close(m_DB);
 }
