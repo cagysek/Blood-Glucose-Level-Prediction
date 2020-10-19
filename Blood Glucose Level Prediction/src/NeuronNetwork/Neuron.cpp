@@ -15,7 +15,7 @@ Neuron::Neuron(unsigned number_of_outputs, unsigned layer_neuron_index)
 {
     for (unsigned i = 0 ; i < number_of_outputs ; i++)
     {
-        output_weights.push_back(Connection());
+        m_output_weights.push_back(Connection());
     }
     
     m_neuronIndex = layer_neuron_index;
@@ -67,7 +67,7 @@ double Neuron::sum_dow(Layer &next_layer)
     
     for (unsigned n = 0 ; n < next_layer.get_neuron_count() - 1 ; n++)
     {
-        sum += output_weights[n].weight * next_layer.get_neuron(n).m_gradient;
+        sum += m_output_weights[n].weight * next_layer.get_neuron(n).m_gradient;
     }
     
     return sum;
@@ -88,8 +88,8 @@ void Neuron::update_input_weights(Layer &prev_layer)
                 * old_delta_weight;
         
         //neuron.updateConnectionValues(newDeltaWeight);
-        neuron.output_weights[m_neuronIndex].weight += new_delta_weight;
-        neuron.output_weights[m_neuronIndex].delta_weight = new_delta_weight;
+        neuron.m_output_weights[m_neuronIndex].weight += new_delta_weight;
+        neuron.m_output_weights[m_neuronIndex].delta_weight = new_delta_weight;
     }
     
     
@@ -97,6 +97,6 @@ void Neuron::update_input_weights(Layer &prev_layer)
 
 void Neuron::update_connection_values(double delta_weight)
 {
-    output_weights[m_neuronIndex].weight = output_weights[m_neuronIndex].weight + delta_weight;
-    output_weights[m_neuronIndex].delta_weight = delta_weight;
+    m_output_weights[m_neuronIndex].weight = m_output_weights[m_neuronIndex].weight + delta_weight;
+    m_output_weights[m_neuronIndex].delta_weight = delta_weight;
 }

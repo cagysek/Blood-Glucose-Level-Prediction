@@ -5,8 +5,8 @@
 //  Created by Jan Čarnogurský on 17/10/2020.
 //
 
-#ifndef NeuronNetwork_hpp
-#define NeuronNetwork_hpp
+#ifndef Neuron_network_hpp
+#define Neuron_network_hpp
 
 #include <stdio.h>
 #include <vector>
@@ -25,6 +25,8 @@ class Neuron_network
         double risk_function(const double x);
     
         double get_recent_average_error(void) const { return m_recent_average_error; }
+    
+        
     
     private:
         std::vector<Layer> m_layers; // [layerNumber][neuronNumber]

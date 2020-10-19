@@ -25,12 +25,12 @@ void showVectorVals(const std::string& label, const std::vector<double> &v)
 
 int main(int argc, const char * argv[]) {
     
-    Data_reader data_reader("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood Glucose Level Prediction/data/asc2018.sqlite");
-    data_reader.open();
+//    Data_reader data_reader("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood Glucose Level Prediction/data/asc2018.sqlite");
+//    data_reader.open();
     std::vector<double> inputValues;
-    data_reader.get_input_data(inputValues, 0, 8);
+    //data_reader.get_input_data(inputValues, 0, 8);
     
-    data_reader.close();
+//    data_reader.close();
  //   return 0;
     std::vector<unsigned> topology;
     topology.push_back(8);
@@ -117,7 +117,7 @@ int main(int argc, const char * argv[]) {
         
         i++;
         
-        if (i >= 1000)
+        if (i >= 15000)
         {
             break;
         }

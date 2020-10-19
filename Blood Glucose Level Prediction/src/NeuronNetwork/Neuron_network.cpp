@@ -10,6 +10,7 @@
 #include "Neuron_network.hpp"
 
 
+
 double Neuron_network::m_recent_average_smoothing_factor = 100.0;
 
 Neuron_network::Neuron_network(const std::vector<unsigned> &topology)
@@ -85,10 +86,10 @@ void Neuron_network::back_propagation(const std::vector<double> &target_values)
     
     
     // gradient na hidden layers
-    for (unsigned layerNum = m_layers.size() - 2 ; layerNum > 0 ; layerNum--)
+    for (unsigned layer_num = m_layers.size() - 2 ; layer_num > 0 ; layer_num--)
     {
-        Layer &hidden_layer = m_layers[layerNum];
-        Layer &next_layer = m_layers[layerNum + 1];
+        Layer &hidden_layer = m_layers[layer_num];
+        Layer &next_layer = m_layers[layer_num + 1];
         
         for (unsigned neuron_num = 0 ; neuron_num < hidden_layer.get_neuron_count() ; neuron_num++)
         {
