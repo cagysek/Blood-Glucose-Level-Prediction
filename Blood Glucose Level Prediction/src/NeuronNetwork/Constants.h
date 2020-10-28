@@ -25,9 +25,39 @@ namespace Constants
         if (index == 0) return Low_Threshold - Half_Band_Size;
         if (index >= Band_Count - 1) return High_Threshold + Half_Band_Size;
 
-        return Low_Threshold + static_cast<double>(index - 1)*Band_Size + Half_Band_Size;
+        return Low_Threshold + static_cast<double>(index - 1) * Band_Size + Half_Band_Size;
     }
 
+    unsigned Level_To_Index_Band(const double value)
+    {
+        if (value <= 3.0)
+        {
+            return 0;
+        }
+        
+        if (value >= 13.0)
+        {
+            return 31;
+        }
+        
+        int index = 0;
+        double start = 3;
+        double tmp = 0;
+        
+        while (index < 32)
+        {
+            if (start > value)
+            {
+                break;
+            }
+            
+            index++;
+            start += Band_Size;;
+        }
+        
+        return index;
+        
+    }
 
 }
 

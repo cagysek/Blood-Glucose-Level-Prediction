@@ -13,6 +13,7 @@
 #include <iostream>
 #include <sqlite3.h>
 #include <vector>
+#include "Segment.hpp"
 
 
 class Data_reader
@@ -23,9 +24,9 @@ class Data_reader
         void open();
         
         // vrací počet položek -> běží v cyklu, takže jetli vrátí 0 -> konec
-        unsigned get_input_data(std::vector<double> &input_values, unsigned limit, unsigned offset);
-        unsigned get_target_data(std::vector<double> &target_values, unsigned limit, unsigned offset);
-        
+        unsigned get_input_data(std::vector<double> &input_values, unsigned limit, unsigned offset, unsigned segmentId);
+        unsigned get_prediction_data(std::vector<double> &target_values, unsigned limit, unsigned offset, unsigned segmentId);
+        void init_segments(std::vector<Segment> &segments);
     
     private:
         const char *m_database_file;

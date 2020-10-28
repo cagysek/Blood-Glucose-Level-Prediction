@@ -62,15 +62,22 @@ void Neuron_network::back_propagation(const std::vector<double> &target_values)
     Layer &output_layer = m_layers.back();
     
     m_error = 0.0;
+    double relative_error = 0.0;
+    
     
     for (unsigned i = 0 ; i < output_layer.get_neuron_count() - 1 ; i++)
     {
         double delta = target_values[i] - output_layer.get_neuron(i).get_output_value();
         m_error += delta * delta;
+        
+        relative_error += abs(target_values[i] - output_layer.get_neuron(i).get_output_value()) / output_layer.get_neuron(i).get_output_value();
     }
     
+    
+    relative_error /= output_layer.get_neuron_count() - 1;
+    
     m_error /= output_layer.get_neuron_count() - 1;
-    m_error = sqrt(m_error); // RMS
+    m_error = sqrt(m_error) + relative_error; // RMSE
     
     m_recent_average_error =
                 (m_recent_average_error * m_recent_average_smoothing_factor + m_error)

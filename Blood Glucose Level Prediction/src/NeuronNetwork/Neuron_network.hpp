@@ -25,6 +25,7 @@ class Neuron_network
         double risk_function(const double x);
     
         double get_recent_average_error(void) const { return m_recent_average_error; }
+        double get_error(void) const { return m_error; }
     
         
     

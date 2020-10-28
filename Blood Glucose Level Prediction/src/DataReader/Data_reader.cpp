@@ -26,46 +26,78 @@ Data_reader::Data_reader(const char *filename)
     m_database_file = filename;
 }
 
-unsigned Data_reader::get_input_data(std::vector<double> &input_values, unsigned limit, unsigned offset)
+unsigned Data_reader::get_input_data(std::vector<double> &input_values, unsigned limit, unsigned offset, unsigned segment_id)
 {
-    
     input_values.clear();
     
-    std::string data("CALLBACK FUNCTION");
-  
-    std::string sql("SELECT * FROM measuredvalue LIMIT 5;");
+    sqlite3_stmt *stmt;
     
-    int rc = sqlite3_exec(m_DB, sql.c_str(), callback, (void*)data.c_str(), NULL);
-  
-    if (rc != SQLITE_OK)
-        std::cout << "Error SELECT" << std::endl;
-    else {
-        std::cout << "Operation OK!" << std::endl;
+    int rc;
+    
+    const char* sql = "SELECT * FROM measuredvalue WHERE segmentId = ? AND ID >= ? ORDER BY ID LIMIT ?;";
+    rc = sqlite3_prepare_v2(m_DB, sql, -1, &stmt, NULL);
+    
+    rc = sqlite3_bind_int( stmt, 1, segment_id );
+    rc = sqlite3_bind_int( stmt, 2, offset );
+    rc = sqlite3_bind_int( stmt, 3, limit );
+    
+    
+    if (rc != SQLITE_OK) {
+        std::cout << sqlite3_errmsg(m_DB) << std::endl;
+        return 0;
     }
+    
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW)
+    {
+        double ist = sqlite3_column_double(stmt, 3);
+        
+        input_values.push_back(ist);
+    }
+    
+    if (rc != SQLITE_DONE) {
+        printf("error: ", sqlite3_errmsg(m_DB));
+    }
+    
+    sqlite3_finalize(stmt);
     
     return input_values.size();
     
 }
 
-unsigned Data_reader::get_target_data(std::vector<double> &target_values, unsigned limit, unsigned offset)
+unsigned Data_reader::get_prediction_data(std::vector<double> &target_values, unsigned limit, unsigned offset, unsigned segment_id)
 {
-    target_values.clear();
+    return get_input_data(target_values, limit, offset, segment_id);
+}
+
+void Data_reader::init_segments(std::vector<Segment> &segments)
+{
+    sqlite3_stmt *stmt;
     
-    std::string data("CALLBACK FUNCTION");
-  
-    std::string sql("SELECT * FROM measuredvalue;");
+    const char* sql = "SELECT id, segmentid, count(*) from measuredvalue group by segmentid order by id;";
+    int rc = sqlite3_prepare_v2(m_DB, sql, -1, &stmt, NULL);
     
-    int rc = sqlite3_exec(m_DB, sql.c_str(), callback, (void*)data.c_str(), NULL);
-  
-    if (rc != SQLITE_OK)
-        std::cout << "Error SELECT" << std::endl;
-    else {
-        std::cout << "Operation OK!" << std::endl;
+    if (rc != SQLITE_OK) {
+        std::cout << sqlite3_errmsg(m_DB) << std::endl;
+        return;
     }
     
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW)
+    {
+        unsigned start_id        = sqlite3_column_int(stmt, 0);
+        unsigned segment_id      = sqlite3_column_int(stmt, 1);
+        unsigned row_count       = sqlite3_column_int(stmt, 2);
+        
+        Segment segment(start_id, segment_id, row_count);
+        
+        segments.push_back(segment);
+    }
     
-    return target_values.size();
-
+    if (rc != SQLITE_DONE) {
+        printf("error: ", sqlite3_errmsg(m_DB));
+    }
+    
+    sqlite3_finalize(stmt);
+    
 }
 
 void Data_reader::open()

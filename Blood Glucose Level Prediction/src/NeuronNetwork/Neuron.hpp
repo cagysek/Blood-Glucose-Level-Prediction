@@ -29,8 +29,8 @@ public:
     void update_input_weights(Layer &prev_layer);
     void update_connection_values(double delta_weight);
     
-    static double ETA; // [0.0 - 1.0] - konstanta jak moc se má síť učit
-    static double ALPHA; // momentum, násobič poslední změny váhy
+    static double ETA; // [0.0 - 1.0] - konstanta jak moc se má síť učit, "jak moc aktuální krok ovlivní další krok"
+    static double ALPHA; // momentum, násobič poslední změny váhy "jak moc minulá změna ovlivní nový krok"
     
     unsigned m_neuronIndex;
     double m_gradient;
