@@ -10,7 +10,6 @@
 
 #include <stdio.h>
 #include <cstdlib>
-#include <time.h>
 
 class Connection
 {

@@ -7,6 +7,8 @@
 
 #include <iostream>
 #include <vector>
+#include "tbb/parallel_for.h"
+#include <mutex>
 
 #include "Neuron_network.hpp"
 #include "Data_reader.hpp"
@@ -24,31 +26,52 @@ void showVectorVals(const std::string& label, const std::vector<double> &v)
 }
 
 
-void prepare_target_values(std::vector<double> &target_values, const double prediction_value)
+void prepare_target_values(const std::vector<double> &prediction_values, std::vector<double> &target_values)
 {
+    // vyčistím targets
     target_values.clear();
     
-    // vytvořím pole, které představuje výstup, defaultně dám všude 0
+    // vypočitám průměr z předpovědí
+    double prediction_average = 0;
+    
+    for (int i = 0; i < prediction_values.size(); i++) {
+        prediction_average += prediction_values[i];
+    }
+    
+    prediction_average /= prediction_values.size();
+    
+    // vytvořím vektor o velikosti výstupů, které představuje výstup, defaultně dám všude -1 (tanh <-1;1>)
     for (unsigned i = 0 ; i < Constants::Internal_Bound_Count ; i++)
     {
         target_values.push_back(-1);
     }
     
-    // z průměrný hodnoty predikce pro hodnoty získám index na výstup (co by to mělo ukazovat)
-    unsigned prediction_index = Constants::Level_To_Index_Band(prediction_value);
+    // z průměrný hodnoty predikce pro hodnoty získám index na výstup (výstup, který by měl mít nejvyšší pravděpodobnost)
+    unsigned prediction_index = Constants::Level_To_Index_Band(prediction_average);
     
     // nasadím hodnotu predikovaného výstupu na 1
     target_values[prediction_index] = 1;
   
 }
 
-
-
+void init_neuron_networks(std::vector<Neuron_network> &neuron_networks, const std::vector<unsigned> &topology)
+{
+    neuron_networks.clear();
+    
+    unsigned neuron_network_count = 20;
+    
+    for (unsigned i = 0 ; i < neuron_network_count ; i++)
+    {
+        neuron_networks.push_back(Neuron_network(topology));
+    }
+}
 
 int main(int argc, const char * argv[]) {
     
     Data_reader data_reader("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood Glucose Level Prediction/data/asc2018.sqlite");
     
+    // init základních vektorů
+    std::vector<Neuron_network> neuron_networks;
     std::vector<double> input_values;
     std::vector<double> target_values;
     std::vector<double> prediction_values;
@@ -58,25 +81,27 @@ int main(int argc, const char * argv[]) {
     // predikce na 60 min
     unsigned prediction_for = 60 / 5; // intervali jsou po 5 min, tímhle zjistím o kolik se posunout
     
+    // vytvoření topologie
     std::vector<unsigned> topology;
     topology.push_back(8);
     topology.push_back(16);
     topology.push_back(26);
     topology.push_back(32);
     
-    Neuron_network neuronNetwork(topology);
+    // vytvoření N neuronových sítí
+    init_neuron_networks(neuron_networks, topology);
     
     int segment_id = 0;
     int offset = 0;
     int limit = 8;
     
+    // otevření db
     data_reader.open();
     
+    // získání segmentů z db - pro lepší práci při získávání dat
     data_reader.init_segments(segments);
     
     double min_error = 100.0;
-    
-    int k = 0;
     
     int segment_counter = 0;
     
@@ -90,8 +115,10 @@ int main(int argc, const char * argv[]) {
     
     int count = 0;
     
+    // hlavní tělo programu
     while (true)
     {
+        // načtení inputu z DB
         count = data_reader.get_input_data(input_values, limit, offset, segment_id);
         
         // posunu se o zadanej čas o kolik chci predikovat
@@ -100,15 +127,13 @@ int main(int argc, const char * argv[]) {
         // pokud nemám dost hodnot na vstupu
         if (input_values.size() != 8)
         {
-            
-            std::cout << "err 1 " << input_values.size() << std::endl;
-            
             // pokud nejsou už další segmenty
             if (segments.size() < segment_counter + 1)
             {
                 break;
             }
             
+            // posunu segment (segment představuje skupinu měření)
             segment_counter++;
             
             // nastavím offset + segmentId pro další selecty
@@ -118,14 +143,7 @@ int main(int argc, const char * argv[]) {
             continue;
         }
         
-        std::cout << " " << std::endl;
-        std::cout << counter << " NEW BATCH!!" << std::endl;
-        for (int i = 0; i < input_values.size(); i++) {
-            std::cout << input_values[i] << std::endl;
-        }
-        
-        
-        
+        // načtení predikcí pro vstup
         data_reader.get_prediction_data(prediction_values, limit, target_offset, segment_id);
         
         // pokud nemám k 8 datům 8 předpovědí, jedu dál
@@ -135,64 +153,67 @@ int main(int argc, const char * argv[]) {
             continue;
         }
         
-        std::cout << " " << std::endl;
-        std::cout << counter << " OUT NEW BATCH!!" << std::endl;
-        showVectorVals("Prediction", prediction_values);
-        double prediction_average = 0;
-        for (int i = 0; i < prediction_values.size(); i++) {
-            prediction_average += prediction_values[i];
-        }
         
-        prediction_average /= prediction_values.size();
+//        showVectorVals("Input: ", input_values);
         
-        prepare_target_values(target_values, prediction_average);
+  //      showVectorVals("Prediction", prediction_values);
         
-        offset = offset + limit;
-     
-        counter++;
+        // z predikcí vytvoří vektor pro porovnání výstupu
+        prepare_target_values(prediction_values, target_values);
         
+        std::mutex m;
         
+        // smp
+        tbb::parallel_for(size_t(0), neuron_networks.size(), [&](size_t i) {
+            /**
+            m.lock();
+                std::cout << i << std::endl;
+            m.unlock();
+             */
+            neuron_networks[i].feed_forward_propagation(input_values);
+            
+            neuron_networks[i].back_propagation(target_values);
+        });
+                          
         
-        neuronNetwork.feed_forward_propagation(input_values);
-        
-        
+       /*
         std::vector<double> resultValues;
         neuronNetwork.get_results(resultValues);
         
         showVectorVals("Result:", resultValues);
+        */
         
+        // posuneme offset pro další čtení vstupů
+        offset = offset + limit;
         
-        neuronNetwork.back_propagation(target_values);
+        // pro debbug, slouží především pro počítání cyklů smyčky
+        counter++;
+    }
+    
+    
+    for (unsigned i = 0 ; i < neuron_networks.size() ; i++)
+    {
+        // report jak dobře se síť trénovala, průměr přes všechny vstupy
+        std::cout << i << ": Net recent average error: " << neuron_networks[i].get_recent_average_error() << std::endl;
         
-        showVectorVals("Targets:", target_values);
+        std::cout << i << ": Net error: "
+                << neuron_networks[i].get_error() << std::endl;
         
-        
-        // Report how well the training is working, average over recent samples:
-                std::cout << "Net recent average error: "
-                        << neuronNetwork.get_recent_average_error() << std::endl;
-        
-        if (min_error > neuronNetwork.get_error())
+        if (min_error > neuron_networks[i].get_error())
         {
-            min_error = neuronNetwork.get_error();
+            min_error = neuron_networks[i].get_error();
         }
-        
-        std::cout << "Net error: "
-                << neuronNetwork.get_error() << std::endl;
-        
     }
         
        
     
     
-    std::cout << "min error: "
-            << min_error << std::endl;
- //   data_reader.close();
+    std::cout << "min error: " << min_error << std::endl;
     
     
-    
+    data_reader.close();
     
     std::cout << "Konec" << std::endl;
     
     return 0;
 }
-

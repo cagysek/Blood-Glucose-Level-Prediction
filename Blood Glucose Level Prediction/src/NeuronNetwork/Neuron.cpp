@@ -8,8 +8,8 @@
 #include "Layer.hpp"
 #include <iostream>
 
-double Neuron::ETA = 0.05;
-double Neuron::ALPHA = 0.99;
+double Neuron::ETA = 0.4;
+double Neuron::ALPHA = 0.7;
 
 Neuron::Neuron(unsigned number_of_outputs, unsigned layer_neuron_index)
 {

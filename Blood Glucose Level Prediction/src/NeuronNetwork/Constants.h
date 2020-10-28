@@ -28,13 +28,18 @@ namespace Constants
         return Low_Threshold + static_cast<double>(index - 1) * Band_Size + Half_Band_Size;
     }
 
+    /**
+        Mapování konkrétní hodnoty mmol/l na výstup neuronky
+     */
     unsigned Level_To_Index_Band(const double value)
     {
+        // pokud <= 3 odpovídá index 0
         if (value <= 3.0)
         {
             return 0;
         }
         
+        // pokud >= odpovídá index 31 (vektror od indexu 0, celkově 32 -> 32 - 1)
         if (value >= 13.0)
         {
             return 31;
@@ -44,6 +49,9 @@ namespace Constants
         double start = 3;
         double tmp = 0;
         
+        // asi by šlo líp
+        // průběžně přičítám velikost intervalu, pokud zadaná hodnota je větší, přičítám pořád
+        // pokud je zadaná hodnota menší, vím že hodnota je z intervalu na pozici index
         while (index < 32)
         {
             if (start > value)
@@ -56,7 +64,6 @@ namespace Constants
         }
         
         return index;
-        
     }
 
 }

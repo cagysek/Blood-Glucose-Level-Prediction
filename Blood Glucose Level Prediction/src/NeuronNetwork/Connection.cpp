@@ -6,6 +6,8 @@
 //
 
 #include "Connection.hpp"
+#include <iostream>
+#include <random>
 
 Connection::Connection()
 {
@@ -15,7 +17,10 @@ Connection::Connection()
 
 double Connection::get_random_weight()
 {
-    srand((unsigned) time(NULL));
+    // generátor náhodných čísel 0 až 1
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> dis(0, 1);//uniform distribution between 0 and 1
     
-    return (double) rand() / RAND_MAX;
+    return dis(gen);
 }

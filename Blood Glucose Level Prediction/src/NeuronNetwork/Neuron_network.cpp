@@ -35,6 +35,8 @@ Neuron_network::Neuron_network(const std::vector<unsigned> &topology)
         // nastavení váhy bias
         m_layers.back().get_bias().set_output_value(1.0);
     }
+    
+    m_error = -1;
 }
 
 
