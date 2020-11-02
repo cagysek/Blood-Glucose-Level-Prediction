@@ -42,6 +42,7 @@ Neuron_network::Neuron_network(const std::vector<unsigned> &topology)
 
 void Neuron_network::feed_forward_propagation(const std::vector<double> &input_values)
 {
+    // na vstup přiřadím vstupní hodnoty
     for (unsigned i = 0 ; i < input_values.size() ; i++)
     {
         m_layers[0].get_neuron(i).set_output_value(risk_function(input_values[i]));
@@ -72,7 +73,9 @@ void Neuron_network::back_propagation(const std::vector<double> &target_values)
         double delta = target_values[i] - output_layer.get_neuron(i).get_output_value();
         m_error += delta * delta;
         
-        relative_error += abs(target_values[i] - output_layer.get_neuron(i).get_output_value()) / output_layer.get_neuron(i).get_output_value();
+        // vypocitana - výstup neuronky
+        // namerena - target_values - to co by mělo vyjít
+        relative_error += abs(target_values[i] - output_layer.get_neuron(i).get_output_value()) / target_values[i];
     }
     
     

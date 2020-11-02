@@ -9,6 +9,7 @@
 #include <vector>
 #include "tbb/parallel_for.h"
 #include <mutex>
+#include <OpenCL/opencl.h>
 
 #include "Neuron_network.hpp"
 #include "Data_reader.hpp"
@@ -66,7 +67,54 @@ void init_neuron_networks(std::vector<Neuron_network> &neuron_networks, const st
     }
 }
 
+void show_open_cl_info()
+{
+    cl_uint num_devices, i;
+    clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ALL, 0, NULL, &num_devices);
+
+
+
+    cl_device_id* devices = (cl_device_id*)calloc(sizeof(cl_device_id), num_devices);
+    
+    clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ALL, num_devices, devices, NULL);
+
+    char buf[128];
+    for (i = 0; i < num_devices; i++) {
+        clGetDeviceInfo(devices[i], CL_DEVICE_NAME, 128, buf, NULL);
+        fprintf(stdout, "Device %s supports ", buf);
+
+        clGetDeviceInfo(devices[i], CL_DEVICE_VERSION, 128, buf, NULL);
+        fprintf(stdout, "%s\n", buf);
+    }
+
+    free(devices);
+    
+    
+    cl_uint numPlatforms = 0;
+    cl_int err = clGetPlatformIDs(5, NULL, &numPlatforms);
+    
+    
+   if (CL_SUCCESS == err)
+       printf("\nDetected OpenCL platforms: %d ", numPlatforms);
+   else
+       printf("\nError calling clGetPlatformIDs. Error code: %d", err);
+    
+    cl_platform_id* platforms = (cl_platform_id*)calloc(sizeof(cl_platform_id), numPlatforms);
+    
+    for (i = 0; i < numPlatforms; i++) {
+        clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, 128, buf, NULL);
+        fprintf(stdout, "Platform %s supports ", buf);
+
+        clGetPlatformInfo(platforms[i], CL_PLATFORM_VENDOR, 128, buf, NULL);
+        fprintf(stdout, "%s\n", buf);
+    }
+    
+    free(platforms);
+}
+
 int main(int argc, const char * argv[]) {
+    
+    // show_open_cl_info();
     
     Data_reader data_reader("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood Glucose Level Prediction/data/asc2018.sqlite");
     
