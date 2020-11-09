@@ -12,7 +12,7 @@ namespace Constants
 {
     static constexpr double Low_Threshold = 3.0;            //mmol/L below which a medical attention is needed
     static constexpr double High_Threshold = 13.0;            //dtto above
-    static constexpr size_t Internal_Bound_Count = 32;      //number of bounds inside the thresholds
+    static constexpr size_t Internal_Bound_Count = 30;      //number of bounds inside the thresholds
 
     static constexpr double Band_Size = (High_Threshold - Low_Threshold)
                                             / static_cast<double>(Internal_Bound_Count); //must imply relative error <= 10%

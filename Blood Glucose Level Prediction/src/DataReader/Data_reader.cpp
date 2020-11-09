@@ -21,9 +21,9 @@ static int callback(void* data, int argc, char** argv, char** azColName)
 }
 
 
-Data_reader::Data_reader(const char *filename)
+Data_reader::Data_reader()
 {
-    m_database_file = filename;
+    
 }
 
 unsigned Data_reader::get_input_data(std::vector<double> &input_values, unsigned limit, unsigned offset, unsigned segment_id)
@@ -100,8 +100,10 @@ void Data_reader::init_segments(std::vector<Segment> &segments)
     
 }
 
-void Data_reader::open()
+void Data_reader::open(const char *filename)
 {
+    m_database_file = filename;
+    
     int exit = 0;
     exit = sqlite3_open(m_database_file, &m_DB);
     

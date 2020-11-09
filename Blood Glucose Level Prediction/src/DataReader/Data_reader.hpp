@@ -19,9 +19,9 @@
 class Data_reader
 {
     public:
-        Data_reader(const char *filename);
+        Data_reader();
         void close();
-        void open();
+        void open(const char *filename);
         
         // vrací počet položek -> běží v cyklu, takže jetli vrátí 0 -> konec
         unsigned get_input_data(std::vector<double> &input_values, unsigned limit, unsigned offset, unsigned segmentId);
