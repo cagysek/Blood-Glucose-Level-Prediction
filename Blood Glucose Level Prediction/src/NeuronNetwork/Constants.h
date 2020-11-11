@@ -20,7 +20,7 @@ namespace Constants
     static constexpr double Half_Band_Size = 0.5 / Inv_Band_Size;
     static constexpr size_t Band_Count = Internal_Bound_Count + 2;
 
-    double Band_Index_To_Level(const size_t index)
+    static double Band_Index_To_Level(const size_t index)
     {
         if (index == 0) return Low_Threshold - Half_Band_Size;
         if (index >= Band_Count - 1) return High_Threshold + Half_Band_Size;
@@ -31,7 +31,7 @@ namespace Constants
     /**
         Mapování konkrétní hodnoty mmol/l na výstup neuronky
      */
-    unsigned Level_To_Index_Band(const double value)
+    static unsigned Level_To_Index_Band(const double value)
     {
         // pokud <= 3 odpovídá index 0
         if (value <= 3.0)

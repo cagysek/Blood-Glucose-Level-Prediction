@@ -11,6 +11,7 @@
 
 
 
+
 double Neuron_network::m_recent_average_smoothing_factor = 100.0;
 
 Neuron_network::Neuron_network(const std::vector<unsigned> &topology)
@@ -52,37 +53,75 @@ void Neuron_network::feed_forward_propagation(const std::vector<double> &input_v
     {
         Layer &prevLayer = m_layers[layer_num - 1];
 
-        for (unsigned neuron_num = 0 ; neuron_num < m_layers[layer_num].get_neuron_count() - 1 ; neuron_num++)
-        {
-            m_layers[layer_num].get_neuron(neuron_num).feed_forward(prevLayer);
-        }
+        
+            for (unsigned neuron_num = 0 ; neuron_num < m_layers[layer_num].get_neuron_count() - 1 ; neuron_num++)
+            {
+                // pokud se nejedná o výstup aplikuju tanH
+                if (layer_num != m_layers.size())
+                {
+                    m_layers[layer_num].get_neuron(neuron_num).feed_forward_hidden(prevLayer);
+                }
+                // pokud je výstup, sečtu akorát hrany bez aktivační funkce, sigmoida se udělá až po cyklu
+                else
+                {
+                    m_layers[layer_num].get_neuron(neuron_num).feed_forward_output(prevLayer);
+                }
+            }
+    }
+    
+    
+    // aplikace sigmoidy na výstup
+    double sum_exp = 0.0;
+    
+    Layer output_layer = m_layers[m_layers.size() - 1];
+    
+    // procházím výstupy bez bias pro získání čitatele v sigmoide
+    for (unsigned i = 0 ; i < output_layer.get_neuron_count() - 1 ; i++)
+    {
+        sum_exp += exp(output_layer.get_neuron(i).get_output_value());
+    }
+    
+    // aplikuju sigmoidu na výstupy
+    for (unsigned neuron_num = 0 ; neuron_num < output_layer.get_neuron_count() - 1 ; neuron_num++)
+    {
+        output_layer.get_neuron(neuron_num).apply_sigmoid_function(sum_exp);
     }
 }
 
-void Neuron_network::back_propagation(const std::vector<double> &target_values)
+void Neuron_network::back_propagation(const std::vector<double> &target_values, double prediction_value)
 {
     // RMS
     Layer &output_layer = m_layers.back();
     
     m_error = 0.0;
-    double relative_error = 0.0;
     
+    
+    unsigned biggest_value_index = 0;
     
     for (unsigned i = 0 ; i < output_layer.get_neuron_count() - 1 ; i++)
     {
-        double delta = target_values[i] - output_layer.get_neuron(i).get_output_value();
+        double output_value = output_layer.get_neuron(i).get_output_value();
+        
+        double delta = target_values[i] - output_value;
         m_error += delta * delta;
         
-        // vypocitana - výstup neuronky
-        // namerena - target_values - to co by mělo vyjít
-        relative_error += abs(target_values[i] - output_layer.get_neuron(i).get_output_value()) / target_values[i];
+        // najdeme největší pravděpodobnost -> náš výsledek
+        if (output_value > output_layer.get_neuron(biggest_value_index).get_output_value())
+        {
+            biggest_value_index = i;
+        }
     }
     
+    // relativní error 
+    double calculated_prediction = Constants::Band_Index_To_Level(biggest_value_index);
     
-    relative_error /= output_layer.get_neuron_count() - 1;
+    double relative_error = abs(calculated_prediction - prediction_value) / prediction_value;
     
+    m_relative_error.push_back(relative_error);
+
+    // error pro backpropagation
     m_error /= output_layer.get_neuron_count() - 1;
-    m_error = sqrt(m_error) + relative_error; // RMSE
+    m_error = sqrt(m_error); // RMS
     
     m_recent_average_error =
                 (m_recent_average_error * m_recent_average_smoothing_factor + m_error)
@@ -144,4 +183,31 @@ double Neuron_network::risk_function(const double x)
     const double original_risk = 1.794 * (pow(log(x), 1.026) - 1.861);    //mmol/L
         
     return original_risk / 3.5;
+}
+
+double Neuron_network::get_average_error()
+{
+    double sum = 0.0;
+    
+    for (unsigned i = 0; i < m_relative_error.size() ; i++)
+    {
+        sum += m_relative_error[i];
+    }
+    
+    return sum / m_relative_error.size();
+}
+
+double Neuron_network::get_stanadrd_deviation()
+{
+    double relative_error_mean = get_average_error();
+    
+    double sum = 0.0;
+    
+    for (unsigned i = 0; i < m_relative_error.size() ; i++)
+    {
+        sum += pow(m_relative_error[i] - relative_error_mean, 2);
+    }
+    
+    return sqrt(sum / (m_relative_error.size() - 1));
+    
 }

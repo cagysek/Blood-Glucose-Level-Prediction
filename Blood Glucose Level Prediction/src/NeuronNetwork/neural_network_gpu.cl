@@ -1,6 +1,7 @@
 #define NUM_INPUT       8
 #define NUM_HIDDEN_1    16
-#define NUM_HIDDEN_2    32
+#define NUM_HIDDEN_2    26
+#define NUM_OUTPUT      32
 #define ETA             0.4
 #define ALPHA           0.8
 
@@ -33,6 +34,51 @@ __kernel void vector_add(__global const int *A, __global const int *B, __global 
  
     // Do the operation
     C[i] = A[i] + B[i];
+}
+
+__kernel void Evaluate1( const int entryIdx, __global float* ND, __global float* TD )
+{
+    int id = get_global_id( 0 ); // get thread id, 0..INPUTSIZE-1 are valid
+    
+    if (id >= NUM_INPUT)
+    {
+        return;
+    }
+
+    // nastaví vstupní hodnoty
+    ND[input_neuron( id )] = TD[input( id )];
+
+    // defaultní hodnoty pro 1. skrytou vrstvu
+    if (id < NUM_HIDDEN_1)
+    {
+        ND[hidden_neuron_1( id )] = 0;
+    }
+    
+    // defaultní hodnoty pro 1. skrytou vrstvu
+    if (id < NUM_HIDDEN_2)
+    {
+        ND[hidden_neuron_2( id )] = 0;
+    }
+    // above code must complete before we go into Evaluate2
+}
+
+__kernel void Evaluate2( __global float* ND )
+{
+    int id = get_global_id( 0 ); // get thread id, 0..NUMHIDDEN-1 are valid
+    
+    if (id >= NUM_HIDDEN_1)
+    {
+        return;
+    }
+    // get weighted sum of pattern and bias neuron
+    for( int j = 0; j <= NUM_INPUT; j++ )
+    {
+        ND[hidden_neuron_1( id )] += ND[input_neuron( j )] * ND[weight_input_hidden( id, j )];
+    }
+    // apply activation function
+    ND[hidden_neuron_1( id )] = SigmoidActivationFunction( ND[hidden_neuron_1( id )] );
+    
+    // above code must complete before we go into Evaluate3
 }
 
 

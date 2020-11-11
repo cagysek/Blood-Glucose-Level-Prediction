@@ -61,9 +61,9 @@ int main(int argc, const char * argv[]) {
     
     Program program;
     
-    program.run_open_cl();
+    //program.run_open_cl();
     
-    //program.run_smp();
+    program.run_smp();
     
     return 0;
 }

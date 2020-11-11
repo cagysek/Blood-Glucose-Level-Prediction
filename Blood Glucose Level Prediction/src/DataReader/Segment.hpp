@@ -17,7 +17,6 @@ class Segment
         unsigned m_start_id;
         unsigned m_segment_id;
         unsigned m_row_count;
-    
 };
 
 #endif /* Segment_hpp */

@@ -21,7 +21,9 @@ public:
     Neuron(unsigned number_of_outputs, unsigned neuron_index);
     void set_output_value(double new_output_val) { m_output = new_output_val; };
     double get_output_value() { return m_output; }
-    void feed_forward(Layer &prev_layer);
+    void feed_forward_hidden(Layer &prev_layer);
+    void feed_forward_output(Layer &prev_layer);
+    void apply_sigmoid_function(double sum_exp);
     double get_neuron_output_weight(unsigned index) { return m_output_weights[index].weight; }
     double get_neuron_output_delta_weight(unsigned index) { return m_output_weights[index].delta_weight; }
     void calc_output_gradients(double target_Val);
@@ -39,7 +41,8 @@ private:
     
     std::vector<Connection> m_output_weights;
     
-    static double activation_function(const double x);
+    static double activation_function_tanh(const double x);
+    static double activation_function_softmax(double x);
     static double activation_function_derivative(const double x);
     
     double sum_dow(Layer &next_layer);

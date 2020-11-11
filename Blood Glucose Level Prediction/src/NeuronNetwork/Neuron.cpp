@@ -8,8 +8,8 @@
 #include "Layer.hpp"
 #include <iostream>
 
-double Neuron::ETA = 0.4;
-double Neuron::ALPHA = 0.7;
+double Neuron::ETA = 0.1;
+double Neuron::ALPHA = 0.8;
 
 Neuron::Neuron(unsigned number_of_outputs, unsigned layer_neuron_index)
 {
@@ -21,7 +21,7 @@ Neuron::Neuron(unsigned number_of_outputs, unsigned layer_neuron_index)
     m_neuronIndex = layer_neuron_index;
 }
 
-void Neuron::feed_forward(Layer &prev_layer)
+void Neuron::feed_forward_hidden(Layer &prev_layer)
 {
     double sum = 0.0;
     
@@ -33,15 +33,44 @@ void Neuron::feed_forward(Layer &prev_layer)
         
     }
     
-    m_output = activation_function(sum);
+    m_output = activation_function_tanh(sum);
+}
+
+/**
+    Spočte hodnoty na výstupu bez použití aktivační funkce
+ */
+void Neuron::feed_forward_output(Layer &prev_layer)
+{
+    double sum = 0.0;
+    
+    // prodju výstupy předešlé vrstvy a vynásobím s vahami propojení
+    for (unsigned i = 0 ; i < prev_layer.get_neuron_count() ; i++)
+    {
+        sum += prev_layer.get_neuron(i).get_output_value()
+                * prev_layer.get_neuron(i).get_neuron_output_weight(m_neuronIndex);
+        
+    }
+    
+    m_output = sum;
+}
+
+void Neuron::apply_sigmoid_function(double sum_exp)
+{
+    m_output = exp(m_output) / sum_exp;
 }
 
 /**
     Aktivační funkce, použito TanH
  */
-double Neuron::activation_function(double x)
+double Neuron::activation_function_tanh(double x)
 {
     return tanh(x);
+}
+
+double Neuron::activation_function_softmax(double x)
+{
+    
+    return 0.0;
 }
 
 double Neuron::activation_function_derivative(double x)

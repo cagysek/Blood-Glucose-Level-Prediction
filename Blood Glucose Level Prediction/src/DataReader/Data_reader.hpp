@@ -14,6 +14,7 @@
 #include <sqlite3.h>
 #include <vector>
 #include "Segment.hpp"
+#include "Row.hpp"
 
 
 class Data_reader
@@ -27,6 +28,9 @@ class Data_reader
         unsigned get_input_data(std::vector<double> &input_values, unsigned limit, unsigned offset, unsigned segmentId);
         unsigned get_prediction_data(std::vector<double> &target_values, unsigned limit, unsigned offset, unsigned segmentId);
         void init_segments(std::vector<Segment> &segments);
+        
+        std::vector<Row> *get_data();
+        
     
     private:
         const char *m_database_file;

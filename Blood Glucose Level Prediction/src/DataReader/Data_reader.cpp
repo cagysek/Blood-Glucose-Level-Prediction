@@ -100,6 +100,42 @@ void Data_reader::init_segments(std::vector<Segment> &segments)
     
 }
 
+
+std::vector<Row> *Data_reader::get_data()
+{
+    sqlite3_stmt *stmt;
+    
+    std::vector<Row> *rows = new std::vector<Row>();
+    
+    const char* sql = "SELECT segmentid, ist from measuredvalue order by id;";
+    int rc = sqlite3_prepare_v2(m_DB, sql, -1, &stmt, NULL);
+    
+    if (rc != SQLITE_OK) {
+        std::cout << sqlite3_errmsg(m_DB) << std::endl;
+        return rows;
+    }
+    
+    
+    
+    while ((rc = sqlite3_step(stmt)) == SQLITE_ROW)
+    {
+        unsigned segment_id        = sqlite3_column_int(stmt, 0);
+        double ist                 = sqlite3_column_double(stmt, 1);
+        
+        
+        rows->push_back(Row(ist, segment_id));
+    }
+    
+    if (rc != SQLITE_DONE) {
+        printf("error: ", sqlite3_errmsg(m_DB));
+    }
+    
+    sqlite3_finalize(stmt);
+    
+    return rows;
+}
+
+
 void Data_reader::open(const char *filename)
 {
     m_database_file = filename;

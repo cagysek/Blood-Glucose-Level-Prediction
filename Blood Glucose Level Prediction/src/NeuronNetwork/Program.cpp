@@ -6,7 +6,10 @@
 //
 
 #include "Program.hpp"
-#include "Constants.h"
+
+
+#define INPUT_COUNT     8
+#define OFFSET_CONSTANT 1
 
 void showVectorVals(const std::string& label, const std::vector<double> &v)
 {
@@ -46,73 +49,64 @@ Program::~Program()
 void Program::run_smp()
 {
     // predikce na 60 min
-    unsigned prediction_for = 60 / 5; // intervali jsou po 5 min, tímhle zjistím o kolik se posunout
+    unsigned prediction_for = 60 / 5; // intervaly jsou po 5 min, tímhle zjistím o kolik se posunout
 
-    int segment_id = 0;
     int offset = 0;
-    int limit = 8;
     
     double min_error = 100.0;
     
-    int segment_counter = 0;
-    
     int counter = 1;
     
-    int target_offset = 0;
+    int prediction_index_at = 0;
     
-    // první init parametrů
-    segment_id = m_segments[segment_counter].m_segment_id;
-    offset = m_segments[segment_counter].m_start_id;
+   
     
-    int count = 0;
+    // pointer na všechny data z db
+    std::vector<Row> *data = m_data_reader.get_data();
     
     auto start = std::chrono::steady_clock::now();
     
+    unsigned stop = 1000;
+    
     // hlavní tělo programu
-    while (true)
+    while (offset <= data->size() && offset < stop)
+   // while (offset <= data->size())
     {
-        // načtení inputu z DB
-        count = m_data_reader.get_input_data(m_input_values, limit, offset, segment_id);
+       // std::cout << offset << std::endl;
         
-        // posunu se o zadanej čas o kolik chci predikovat
-        target_offset = offset + prediction_for;
+        // kolik chci predikovat + počet vstupů (chceme predikci od poslední hodnoty) - 1 (indexujeme od 0)
+        prediction_index_at = offset + prediction_for + INPUT_COUNT - 1;
         
-        // pokud nemám dost hodnot na vstupu
-        if (m_input_values.size() != 8)
+        if (prediction_index_at >= data->size())
         {
-            // pokud nejsou už další segmenty
-            if (m_segments.size() < segment_counter + 1)
-            {
-                break;
-            }
-            
-            // posunu segment (segment představuje skupinu měření)
-            segment_counter++;
-            
-            // nastavím offset + segmentId pro další selecty
-            offset = m_segments[segment_counter].m_start_id;
-            segment_id = m_segments[segment_counter].m_segment_id;
-            
-            continue;
-        }
-        
-        // načtení predikcí pro vstup
-        m_data_reader.get_prediction_data(m_prediction_values, limit, target_offset, segment_id);
-        
-        // pokud nemám k 8 datům 8 předpovědí, jedu dál
-        if (m_prediction_values.size() != 8)
-        {
-            offset = offset + 8;
-            continue;
+            break;
         }
         
         
-//        showVectorVals("Input: ", input_values);
+        Row prediction = data->at(prediction_index_at);
         
-  //      showVectorVals("Prediction", prediction_values);
+        // pokud pro hodnotu neexistuje predikce
+        // kontrolujeme to s prvním inputem - zajištění, že první hodnota a predikce mají stejný segmentId
+        if (prediction.get_segment_id() != data->at(offset).get_segment_id())
+        {
+            // zvětšíme offset o jedna a pokračujeme
+            offset += 1;
+            continue;
+        }
+        
+        // inicializace vstupů
+        m_input_values.clear();
+        
+        for (unsigned i = 0; i < INPUT_COUNT ; i++)
+        {
+            m_input_values.push_back(data->at(offset + i).get_ist());
+        }
+        
+        //showVectorVals("Input: ", m_input_values);
+        //std::cout << "Prediction: " << prediction.get_ist() << std::endl;
         
         // z predikcí vytvoří vektor pro porovnání výstupu
-        prepare_target_values();
+        prepare_target_values(prediction.get_ist());
         
         std::mutex m;
         
@@ -125,7 +119,7 @@ void Program::run_smp()
              */
             m_neuron_networks[i].feed_forward_propagation(m_input_values);
             
-            m_neuron_networks[i].back_propagation(m_target_values);
+            m_neuron_networks[i].back_propagation(m_target_values, prediction.get_ist());
         });
                           
         
@@ -136,8 +130,8 @@ void Program::run_smp()
         showVectorVals("Result:", resultValues);
         */
         
-        // posuneme offset pro další čtení vstupů
-        offset = offset + limit;
+        // posuneme se o jedno
+        offset += OFFSET_CONSTANT;
         
         // pro debbug, slouží především pro počítání cyklů smyčky
         counter++;
@@ -149,14 +143,16 @@ void Program::run_smp()
     for (unsigned i = 0 ; i < m_neuron_networks.size() ; i++)
     {
         // report jak dobře se síť trénovala, průměr přes všechny vstupy
-        std::cout << i << ": Net recent average error: " << m_neuron_networks[i].get_recent_average_error() << std::endl;
+        std::cout << i << ": Net average error: " << m_neuron_networks[i].get_average_error() << std::endl;
         
-        std::cout << i << ": Net error: "
-                << m_neuron_networks[i].get_error() << std::endl;
+        std::cout << i << ": Net standart deviation: "
+                << m_neuron_networks[i].get_stanadrd_deviation() << std::endl;
         
-        if (min_error > m_neuron_networks[i].get_error())
+        double error = m_neuron_networks[i].get_average_error() + m_neuron_networks[i].get_stanadrd_deviation();
+        
+        if (min_error > error)
         {
-            min_error = m_neuron_networks[i].get_error();
+            min_error = error;
         }
     }
         
@@ -164,8 +160,12 @@ void Program::run_smp()
     std::cout << "min error: " << min_error << std::endl;
     
     std::cout << "Doba výpočtu: " << std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << " sec" << std::endl;
+    std::cout << "Počet cyklů: " << counter << std::endl;
     
     std::cout << "Konec" << std::endl;
+    
+    
+    free(data);
 }
 
 void Program::run_open_cl()
@@ -273,7 +273,7 @@ void Program::init_neuron_networks(const std::vector<unsigned> &topology)
 {
     m_neuron_networks.clear();
     
-    unsigned neuron_network_count = 100;
+    unsigned neuron_network_count = 20;
     
     // 100 cca - 13 sec
     // 1000 cca 193 sec
@@ -284,28 +284,19 @@ void Program::init_neuron_networks(const std::vector<unsigned> &topology)
     }
 }
 
-void Program::prepare_target_values()
+void Program::prepare_target_values(double prediction_value)
 {
     // vyčistím targets
     m_target_values.clear();
-    
-    // vypočitám průměr z předpovědí
-    double prediction_average = 0;
-    
-    for (int i = 0; i < m_prediction_values.size(); i++) {
-        prediction_average += m_prediction_values[i];
-    }
-    
-    prediction_average /= m_prediction_values.size();
    
-    // vytvořím vektor o velikosti výstupů, které představuje výstup, defaultně dám všude -1 (tanh <-1;1>)
-    for (unsigned i = 0 ; i < Constants::Internal_Bound_Count + 2 ; i++)
+    // vytvořím vektor o velikosti výstupů, které představuje výstup, defaultně dám všude 0 (softmax <0;1>)
+    for (unsigned i = 0 ; i < 32 ; i++)
     {
-        m_target_values.push_back(-1);
+        m_target_values.push_back(0);
     }
     
     // z průměrný hodnoty predikce pro hodnoty získám index na výstup (výstup, který by měl mít nejvyšší pravděpodobnost)
-    unsigned prediction_index = Constants::Level_To_Index_Band(prediction_average);
+    unsigned prediction_index = Constants::Level_To_Index_Band(prediction_value);
     
     // nasadím hodnotu predikovaného výstupu na 1
     m_target_values[prediction_index] = 1;

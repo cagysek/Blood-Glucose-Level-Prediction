@@ -17,8 +17,6 @@
 #include <mutex>
 
 #ifdef __APPLE__
-    // openCL je defaultně na macu, ručně jsem si ale stáhnul SDK od khronosu a umístil ho sem
-    ///Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.15.sdk/System/Library/Frameworks/OpenCL.framework
     #include <OpenCL/cl.h>
 #else
     #include <CL/cl.hpp>
@@ -47,7 +45,7 @@ private:
     std::vector<Segment> m_segments;
     
     void init_neuron_networks(const std::vector<unsigned> &topology);
-    void prepare_target_values();
+    void prepare_target_values(double prediction_value);
 };
 
 #endif /* Program_hpp */
