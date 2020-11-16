@@ -104,8 +104,10 @@ double Neuron::sum_dow(Layer &next_layer)
 
 void Neuron::update_input_weights(Layer &prev_layer)
 {
+    // procházím předešlou vrstvu
     for (unsigned n = 0 ; n < prev_layer.get_neuron_count() ; n++)
     {
+        // beru průběžně neurony a jejich spojení v aktuálním neuronem (m_neuronIndex)
         Neuron& neuron = prev_layer.get_neuron(n);
         double old_delta_weight = neuron.get_neuron_output_delta_weight(m_neuronIndex);
         
