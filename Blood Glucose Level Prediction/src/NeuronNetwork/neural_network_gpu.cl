@@ -2,38 +2,46 @@
 #define NUM_HIDDEN_1    16
 #define NUM_HIDDEN_2    26
 #define NUM_OUTPUT      32
-#define ETA             0.4f
+#define BIAS_OFFSET     1
+#define ETA             0.1f
 #define ALPHA           0.8f
 
-
+// Mapování pro neuronovou síť
 int input_neuron(int i) { return i; }
-int hidden_neuron_1(int i) { return 8 + i; }
-int hidden_neuron_2(int i) { return 24 + i; }
-int output_neuron(int i) { return 50 + i; }
+int hidden_neuron_1(int i) { return 8 + BIAS_OFFSET + i; }
+int hidden_neuron_2(int i) { return 24 + BIAS_OFFSET + i; }
+int output_neuron(int i) { return 50 + BIAS_OFFSET + i; }
 int weight_input_hidden(int i, int j) { return 100 + i * 16 + j; }
 int weight_hidden_hidden(int i, int j) { return 250 + i * 26 + j; }
 int weight_hidden_output(int i, int j) { return 700 + i * 31 + j; }
-int output_exp_sum() { return 971; }
+int output_exp_sum() { return 2000; }
 
+// mapování pro trénovací množinu
+int input (int training_set_id, int i) { return training_set_id * NUM_INPUT + i; }
 
-int input (int i) { return i; }
-int expected (int i, int j) { return 8 + i; }
+// mapování pro výsledky
+int expected (int training_set_id, int i) { return training_set_id * NUM_OUTPUT + i; }
 
-
+// mapování pro výpočty v backpropagation
 int delta_input_hidden(int i, int j) { return i * 16 + j; }
-int delta_hidden_hidden(int i, int j) { return 150 + i * 26 + j; }
-int delta_hidden_output(int i, int j) { return 600 + i * 31 + j; }
-int error_gradient_hidden_1 (int i) { return 900 + i; }
-int error_gradient_hidden_2 (int i) { return 920 + i; }
-int error_gradien_output (int i) { return 950 + i; }
+int delta_hidden_hidden(int i, int j) { return 170 + i * 26 + j; }
+int delta_hidden_output(int i, int j) { return 700 + i * 32 + j; }
+int error_gradient_hidden_1 (int i) { return 1800 + i; }
+int error_gradient_hidden_2 (int i) { return 1850 + i; }
+int error_gradien_output (int i) { return 1900 + i; }
+
+// mapování pro výsledky
+int results_index (int entry_id, int i) { return entry_id * NUM_OUTPUT + i; }
+
 
 /**
     Hello world
  */
-__kernel void vector_add(__global const int *A, __global const int *B, __global int *C) {
+__kernel void vector_add(__global const float *A, __global const int *B, __global int *C) {
  
     // Get the index of the current element to be processed
     int i = get_global_id(0);
+    
  
     // Do the operation
     C[i] = A[i] + B[i];
@@ -76,7 +84,7 @@ float get_output_error_gradient( float expected_val, float output_val )
  */
 float get_hidden_2_error_gradient( int hiddenIdx, __global float* ND, __global float* DG )
 {
-    float weighted_sum = 0;
+    float weighted_sum = 0.0f;
     
     // suma hran a error gradientu mezi 2. skrytou a výstupem
     for( int i = 0; i < NUM_OUTPUT; i++ )
@@ -94,7 +102,7 @@ float get_hidden_2_error_gradient( int hiddenIdx, __global float* ND, __global f
 float get_hidden_1_error_gradient( int hiddenIdx, __global float* ND, __global float* DG )
 {
     
-    float weighted_sum = 0;
+    float weighted_sum = 0.0f;
     
     // suma hran a error gradientu mezi skrytými vrstvami
     for( int i = 0; i < NUM_HIDDEN_2; i++ )
@@ -124,7 +132,7 @@ inline void atomic_add_float( volatile __global float* source, const float opera
 /**
     Nasázení vstupních hodnot do neuronů ve všech vrstvách
  */
-__kernel void Evaluate1( const int entryIdx, __global float* ND, __global float* TD )
+__kernel void neural_network_setup( const int training_set_id, __global float* neural_net, __global float* training_set )
 {
     int id = get_global_id( 0 );
     
@@ -132,31 +140,35 @@ __kernel void Evaluate1( const int entryIdx, __global float* ND, __global float*
     {
         return;
     }
-
+    
+    neural_net[output_neuron(id)] = 0;
+    
+    neural_net[output_exp_sum()] = 0.0f;
+    
     // NUM_HIDDEN_2 -> největší ID co můžu zpracovat
-    if (id < NUM_HIDDEN_2)
+    if (id < NUM_INPUT)
     {
         // nastaví vstupní hodnoty
-        ND[input_neuron( id )] = TD[input( id )];
+        neural_net[input_neuron( id )] = training_set[input( training_set_id, id )];
     }
     
     // defaultní hodnoty pro 1. skrytou vrstvu
     if (id < NUM_HIDDEN_1)
     {
-        ND[hidden_neuron_1( id )] = 0;
+        neural_net[hidden_neuron_1( id )] = 0;
     }
     
     // defaultní hodnoty pro 2. skrytou vrstvu
     if (id < NUM_HIDDEN_2)
     {
-        ND[hidden_neuron_2( id )] = 0;
+        neural_net[hidden_neuron_2( id )] = 0;
     }
 }
 
 /**
     Feedforward mezi vstupem a 1. skrytou vrstvou
  */
-__kernel void feed_forward_input_hidden( __global float* ND )
+__kernel void feed_forward_input_hidden( __global float* neural_net )
 {
     int id = get_global_id( 0 );
     
@@ -167,17 +179,21 @@ __kernel void feed_forward_input_hidden( __global float* ND )
     // získání sumy vah a neuronu pro konkrétní neuron
     for( int j = 0; j <= NUM_INPUT; j++ )
     {
-        ND[hidden_neuron_1( id )] += ND[input_neuron( j )] * ND[weight_input_hidden( id, j )];
+  //      printf("1: %f\n", neural_net[input_neuron(j)]);
+  //      printf("2: %f\n", neural_net[weight_input_hidden( j, id )]);
+        neural_net[hidden_neuron_1( id )] += neural_net[input_neuron( j )] * neural_net[weight_input_hidden( j, id )];
     }
-    
+
     // aplikace aktivační funkce
-    ND[hidden_neuron_1( id )] = tanh_activation_function( ND[hidden_neuron_1( id )] );
+    neural_net[hidden_neuron_1( id )] = tanh_activation_function( neural_net[hidden_neuron_1( id )] );
+    
+    
 }
 
 /**
     Feedforward mezi 1. a 2. skrytou vrstvou
  */
-__kernel void feed_forward_hidden_hidden( __global float* ND )
+__kernel void feed_forward_hidden_hidden( __global float* neural_net )
 {
     int id = get_global_id( 0 );
     
@@ -189,17 +205,17 @@ __kernel void feed_forward_hidden_hidden( __global float* ND )
     // získání sumy neuronů a vah
     for( int j = 0; j <= NUM_HIDDEN_1; j++ )
     {
-        ND[hidden_neuron_2( id )] += ND[hidden_neuron_1( j )] * ND[weight_hidden_hidden( id, j )];
+        neural_net[hidden_neuron_2( id )] += neural_net[hidden_neuron_1( j )] * neural_net[weight_hidden_hidden( j, id )];
     }
     
     // aplikace aktivační funkce
-    ND[hidden_neuron_2( id )] = tanh_activation_function( ND[hidden_neuron_2( id )] );
+    neural_net[hidden_neuron_2( id )] = tanh_activation_function( neural_net[hidden_neuron_2( id )] );
 }
 
 /**
     Feedforward mezi 2. skrytou a výstupní vrstvu
  */
-__kernel void feed_forward_hidden_output( __global float* ND )
+__kernel void feed_forward_hidden_output( __global float* neural_net )
 {
     int id = get_global_id( 0 );
     
@@ -211,18 +227,23 @@ __kernel void feed_forward_hidden_output( __global float* ND )
     // získání sumy neuronu a vah
     for( int j = 0; j <= NUM_HIDDEN_2; j++ )
     {
-        ND[output_neuron( id )] += ND[hidden_neuron_2( j )] * ND[weight_hidden_output( id, j )];
+        printf("1: %d %d %f %f\n",j ,id,neural_net[hidden_neuron_2( j )],neural_net[weight_hidden_output( j, id )] );
+        
+        neural_net[output_neuron( id )] += neural_net[hidden_neuron_2( j )] * neural_net[weight_hidden_output( j, id )];
+        
     }
     
     // současně si výsledek v exponencionále uložíme do čítače sumy pro softmax
     // použit atomic add kvůli tomu, že může přistupovat více vláken
-    atomic_add_float( &ND[output_exp_sum()],  exp(ND[output_neuron( id )]));
+    atomic_add_float( &neural_net[output_exp_sum()],  exp(neural_net[output_neuron( id )]));
+    
+  //  printf("out: %f\n",neural_net[output_exp_sum()] );
 }
 
 /**
     Aplikace softmaxu na výstup, výpočet error gradientu na výstupu
  */
-__kernel void backpropagate_1( int entryIdx, __global float* ND, __global float* TD, __global float* DG )
+__kernel void backpropagate_output( int training_set_id, __global float* neural_net, __global float* target_set, __global float* delta_gradient, __global float* results)
 {
     int id = get_global_id( 0 );
     
@@ -233,17 +254,36 @@ __kernel void backpropagate_1( int entryIdx, __global float* ND, __global float*
     }
     
     // aplikace softmaxu na výstupy (na výstup dosud nebyla aktivována žádná aktivační funkce)
-    ND[output_neuron( id )] = soft_max_function(ND[output_neuron( id )], ND[output_exp_sum()]);
+ //   printf("prev: %f\n",neural_net[output_neuron( id )] );
+ //   printf("sum: %f\n",neural_net[output_exp_sum()] );
     
+    neural_net[output_neuron( id )] = soft_max_function(neural_net[output_neuron( id )], neural_net[output_exp_sum()]);
+    
+ // printf("val: %f\n",neural_net[output_neuron( id )] );
+    /*
+    neural_net[output_neuron( id )] = tanh_activation_function(neural_net[output_neuron( id )]);
+    */
+    
+    
+    // uložím si vypočítané výsledky pro dopočítání errorů na cpu
+    // šlo by optimalizovat tady..
+    
+    results[results_index( training_set_id, id )] = neural_net[output_neuron( id )];
+    
+ //   printf("g: %f %f %f\n",target_set[expected( training_set_id, id )],neural_net[output_neuron( id )], get_output_error_gradient( target_set[expected( training_set_id, id )], neural_net[output_neuron( id )]));
     
     // výpočet error gradientu na výstupech
-    DG[error_gradien_output( id )] = get_output_error_gradient( TD[expected( entryIdx, id )], ND[output_neuron( id )] );
+    delta_gradient[error_gradien_output( id )] = get_output_error_gradient( target_set[expected( training_set_id, id )], neural_net[output_neuron( id )] );
+    
+   // printf("%f\n", delta_gradient[error_gradien_output( id )]);
+    //printf("%d : %f\n", id, delta_gradient[error_gradien_output( id )]);
+//    printf("r %f \n", results[results_index( training_set_id, id )]);
 }
 
 /**
     Výpočet nových delt mezi výstupem a 2. skrytou vrstvou
  */
-__kernel void backpropagate_2( __global float* ND, __global float* DG )
+__kernel void backpropagate_output_hidden( __global float* neural_net, __global float* delta_gradient )
 {
     int id = get_global_id( 0 );
     
@@ -256,22 +296,26 @@ __kernel void backpropagate_2( __global float* ND, __global float* DG )
     // modifikace delt mezi výstupem a 2. skrytou vrstvou
     for( int k = 0; k < NUM_OUTPUT; k++ )
     {
-        DG[delta_hidden_output( id, k )] =
+       // printf("%d, %f, %f, %f\n", k, neural_net[hidden_neuron_2( id )],
+       //        delta_gradient[error_gradien_output( k )], delta_gradient[delta_hidden_output( id, k )]);
+        delta_gradient[delta_hidden_output( id, k )] =
                         ETA
-                        * ND[hidden_neuron_2( id )]
-                        * DG[error_gradien_output( k )]
+                        * neural_net[hidden_neuron_2( id )]
+                        * delta_gradient[error_gradien_output( k )]
                         + ALPHA
-                        * DG[delta_hidden_output( id, k )];
+                        * delta_gradient[delta_hidden_output( id, k )];
+        
+        //printf("%d : %f\n", k, delta_gradient[delta_hidden_output( id, k )]);
     }
     
     // výpočet error gradientu pro prvek v 2. skryté vrstvě
-    DG[error_gradient_hidden_2( id )] = get_hidden_2_error_gradient( id, ND, DG );
+    delta_gradient[error_gradient_hidden_2( id )] = get_hidden_2_error_gradient( id, neural_net, delta_gradient );
 }
 
 /**
     Výpočet nových delt mezi 1. a 2. skrytou vrstvou
  */
-__kernel void backpropagate_3( __global float* ND, __global float* DG )
+__kernel void backpropagate_hidden_hidden( __global float* neural_net, __global float* delta_gradient )
 {
     int id = get_global_id( 0 );
     
@@ -284,22 +328,22 @@ __kernel void backpropagate_3( __global float* ND, __global float* DG )
     // modifikace delt mezi 1. skrytou a 2. skrytou vrstvou
     for( int k = 0; k < NUM_HIDDEN_2; k++ )
     {
-        DG[delta_hidden_hidden( id, k )] =
+        delta_gradient[delta_hidden_hidden( id, k )] =
                         ETA
-                        * ND[hidden_neuron_1( id )]
-                        * DG[error_gradient_hidden_2( k )]
+                        * neural_net[hidden_neuron_1( id )]
+                        * delta_gradient[error_gradient_hidden_2( k )]
                         + ALPHA
-                        * DG[delta_hidden_hidden( id, k )];
+                        * delta_gradient[delta_hidden_hidden( id, k )];
     }
     
     // výpočet error gradientu pro prvek v 1. skryté vrstvě
-    DG[error_gradient_hidden_1( id )] = get_hidden_1_error_gradient( id, ND, DG );
+    delta_gradient[error_gradient_hidden_1( id )] = get_hidden_1_error_gradient( id, neural_net, delta_gradient );
 }
 
 /**
     Výpočet nových delt mezi vstupem a 1. skrytou vrstvou
  */
-__kernel void backpropagate_4( __global float* ND, __global float* DG )
+__kernel void backpropagate_hidden_input( __global float* neural_net, __global float* delta_gradient )
 {
     int id = get_global_id( 0 );
     
@@ -312,19 +356,19 @@ __kernel void backpropagate_4( __global float* ND, __global float* DG )
     // modifikace delt mezi vstupem a 1. skrytou vrstvou
     for( int k = 0; k < NUM_HIDDEN_1; k++ )
     {
-        DG[delta_input_hidden( id, k )] =
+        delta_gradient[delta_input_hidden( id, k )] =
                         ETA
-                        * ND[input_neuron( id )]
-                        * DG[error_gradient_hidden_1( k )]
+                        * neural_net[input_neuron( id )]
+                        * delta_gradient[error_gradient_hidden_1( k )]
                         + ALPHA
-                        * DG[delta_input_hidden( id, k )];
+                        * delta_gradient[delta_input_hidden( id, k )];
     }
 }
 
 /**
     update všech vah. Může být více cyklů, navzájem se neovlivní
  */
-__kernel void update_weights( __global float* ND, __global float* DG )
+__kernel void update_weights( __global float* neural_net, __global float* delta_gradient )
 {
     int id = get_global_id( 0 );
     
@@ -337,18 +381,20 @@ __kernel void update_weights( __global float* ND, __global float* DG )
     // update vah pro input -> 1. skrytá
     if (id <= NUM_INPUT)
     {
-        for( int j = 0; j <= NUM_HIDDEN_1; j++ )
+        for( int j = 0; j < NUM_HIDDEN_1; j++ )
         {
-            ND[weight_input_hidden( id, j )] += DG[delta_input_hidden( id, j )];
+         //   printf("%d %d g1: %f\n",id, j, delta_gradient[delta_input_hidden( j, id )]);
+            neural_net[weight_input_hidden( j, id )] += delta_gradient[delta_input_hidden( j, id )];
         }
     }
     
     // update vah pro 1. skrytá -> 2. skrytá
     if (id <= NUM_HIDDEN_1)
     {
-        for( int j = 0; j <= NUM_HIDDEN_2; j++ )
+        for( int j = 0; j < NUM_HIDDEN_2; j++ )
         {
-            ND[weight_hidden_hidden( id, j )] += DG[delta_hidden_hidden( id, j )];
+        //    printf("%d %d  G2: %f\n",id,j, delta_gradient[delta_hidden_hidden( j, id )]);
+            neural_net[weight_hidden_hidden( j, id )] += delta_gradient[delta_hidden_hidden( j, id )];
         }
     }
     
@@ -357,7 +403,8 @@ __kernel void update_weights( __global float* ND, __global float* DG )
     {
         for ( int j = 0; j < NUM_OUTPUT; j++ )
         {
-            ND[weight_hidden_output( id, j )] += DG[delta_hidden_output( id, j )];
+        //    printf("%d %d  G3: %f\n",id,j,delta_gradient[delta_hidden_output( j, id )]);
+            neural_net[weight_hidden_output( j, id )] += delta_gradient[delta_hidden_output( j, id )];
         }
     }
 }

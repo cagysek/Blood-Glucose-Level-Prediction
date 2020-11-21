@@ -7,20 +7,21 @@
 
 
 #include <iostream>
-#include "Program.hpp"
+#include "Program_smp.hpp"
+#include "Program_gpu.hpp"
 
 
 
 void show_open_cl_info()
 {
     cl_uint num_devices, i;
-    clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ALL, 0, NULL, &num_devices);
+    clGetDeviceIDs(NULL, CL_DEVICE_TYPE_GPU, 0, NULL, &num_devices);
 
 
 
     cl_device_id* devices = (cl_device_id*)calloc(sizeof(cl_device_id), num_devices);
     
-    clGetDeviceIDs(NULL, CL_DEVICE_TYPE_ALL, num_devices, devices, NULL);
+    clGetDeviceIDs(NULL, CL_DEVICE_TYPE_GPU, num_devices, devices, NULL);
 
     char buf[128];
     for (i = 0; i < num_devices; i++) {
@@ -29,6 +30,7 @@ void show_open_cl_info()
 
         clGetDeviceInfo(devices[i], CL_DEVICE_VERSION, 128, buf, NULL);
         fprintf(stdout, "%s\n", buf);
+        
     }
 
     free(devices);
@@ -59,11 +61,13 @@ void show_open_cl_info()
 int main(int argc, const char * argv[]) {
     
     
-    Program program;
+    Program_smp program_smp;
+    Program_gpu program_gpu;
     
-    //program.run_open_cl();
+
+    //program.run_smp();
     
-    program.run_smp();
+    program_gpu.run();
     
     return 0;
 }
