@@ -48,8 +48,6 @@ Program_smp::~Program_smp()
 
 void Program_smp::run()
 {
-   
-    
     //return;
     // predikce na 60 min
     unsigned prediction_for = 60 / 5; // intervaly jsou po 5 min, tímhle zjistím o kolik se posunout
@@ -172,6 +170,7 @@ void Program_smp::run()
     
     output_generator.generate_graph_transmitted_values(m_neuron_networks[0]);
     output_generator.generate_graph_transmitted_values_error(m_neuron_networks[0]);
+    output_generator.generate_init_file(m_neuron_networks[0]);
     
     free(data);
 }

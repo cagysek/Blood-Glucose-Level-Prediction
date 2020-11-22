@@ -219,5 +219,53 @@ void Output_generator::generate_graph(const Neuron_network neural_network, bool 
 
 void Output_generator::generate_init_file(const Neuron_network neural_network)
 {
+    std::ofstream output;
+    
+    output.open("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood Glucose Level Prediction/output/neural.ini", std::ios::out | std::ios::trunc);
+    
+    if (output.is_open())
+    {
+        std::vector<Layer> layers = neural_network.get_layers();
+        
+        for (int i = 0; i < layers.size() - 1; i++)
+        {
+            if (i == 0)
+            {
+                output << "[hidden_layer_1]\n";
+            }
+            else if (i == 1)
+            {
+                output << "[hidden_layer_2]\n";
+            }
+            else if (i == 2)
+            {
+                output << "[output_layer]\n";
+            }
+            
+            for (int j = 0; j < layers[i].get_neuron_count(); j++)
+            {
+                for (int k = 0; k < layers[i].get_neuron(j).get_weights().size(); k++)
+                {
+                    Connection connection = layers[i].get_neuron(j).get_weight(k);
+                    
+                    if (k == layers[i].get_neuron(j).get_weights().size() - 1)
+                    {
+                        output << "Neuron" << j << "_Bias" << "=" << connection.weight << "\n";
+                    }
+                    else
+                    {
+                        output << "Neuron" << j << "_Weight" << k << "=" << connection.weight << "\n";
+                    }
+                    
+                }
+            }
+        }
+         
+        output.close();
+    }
+    else
+    {
+        std::cout << "Nepovedlo se otevřít soubor";
+    }
     
 }
