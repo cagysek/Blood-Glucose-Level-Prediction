@@ -70,8 +70,8 @@ void Program_smp::run()
     unsigned stop = 40000;
     
     // hlavní tělo programu
-    while (offset <= data->size() && offset < stop)
-  //  while (offset <= data->size())
+  //  while (offset <= data->size() && offset < stop)
+    while (offset <= data->size())
     {
        // std::cout << offset << std::endl;
         
@@ -140,6 +140,7 @@ void Program_smp::run()
     
     auto end = std::chrono::steady_clock::now();
     
+    Neuron_network best_neuron_network;
     
     for (unsigned i = 0 ; i < m_neuron_networks.size() ; i++)
     {
@@ -154,6 +155,7 @@ void Program_smp::run()
         if (min_error > error)
         {
             min_error = error;
+            best_neuron_network = m_neuron_networks[i];
         }
     }
         
@@ -168,9 +170,10 @@ void Program_smp::run()
     
     Output_generator output_generator;
     
-    output_generator.generate_graph_transmitted_values(m_neuron_networks[0]);
-    output_generator.generate_graph_transmitted_values_error(m_neuron_networks[0]);
-    output_generator.generate_init_file(m_neuron_networks[0]);
+    output_generator.generate_graph_transmitted_values(best_neuron_network);
+    output_generator.generate_graph_transmitted_values_error(best_neuron_network);
+    output_generator.generate_init_file(best_neuron_network);
+    output_generator.generate_error_csv(best_neuron_network);
     
     free(data);
 }
@@ -180,7 +183,7 @@ void Program_smp::init_neuron_networks(const std::vector<unsigned> &topology)
 {
     m_neuron_networks.clear();
     
-    unsigned neuron_network_count = 1;
+    unsigned neuron_network_count = 10;
     
     // 100 cca - 13 sec
     // 1000 cca 193 sec

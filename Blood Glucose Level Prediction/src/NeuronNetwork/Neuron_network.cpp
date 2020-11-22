@@ -11,6 +11,8 @@
 
 #define GRAPH_ERROR_MAX_VAL 0.15
 
+Neuron_network::Neuron_network(){}
+
 Neuron_network::Neuron_network(const std::vector<unsigned> &topology)
 {
     unsigned number_of_layers = topology.size();

@@ -18,6 +18,7 @@
 class Neuron_network
 {
     public:
+        Neuron_network();
         Neuron_network(const std::vector<unsigned> &topology);
     
         void feed_forward_propagation(const std::vector<double> &input_values);
@@ -30,6 +31,7 @@ class Neuron_network
         double get_average_error(void);
         double get_stanadrd_deviation(void);
         std::vector<Layer> get_layers() const { return m_layers; };
+        std::vector<double> get_errors() const { return m_relative_error; };
         
     
     private:

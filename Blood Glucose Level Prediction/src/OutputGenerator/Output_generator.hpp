@@ -23,10 +23,10 @@ public:
     
     void generate_graph_transmitted_values(const Neuron_network neural_network);
     void generate_graph_transmitted_values_error(const Neuron_network neural_network);
+    void generate_error_csv(const Neuron_network neural_network);
     
 private:
     void generate_graph(const Neuron_network neural_network, bool show_all_transmitted_values);
-
     
 };
 
