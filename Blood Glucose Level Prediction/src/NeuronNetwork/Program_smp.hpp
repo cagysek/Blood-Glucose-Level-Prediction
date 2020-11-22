@@ -15,6 +15,7 @@
 
 #include "tbb/parallel_for.h"
 #include <mutex>
+#include "Output_generator.hpp"
 
 
 class Program_smp

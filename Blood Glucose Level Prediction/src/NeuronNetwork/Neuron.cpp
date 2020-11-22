@@ -28,8 +28,12 @@ void Neuron::feed_forward_hidden(Layer &prev_layer)
     // prodju výstupy předešlé vrstvy a vynásobím s vahami propojení
     for (unsigned i = 0 ; i < prev_layer.get_neuron_count() ; i++)
     {
-        sum += prev_layer.get_neuron(i).get_output_value()
-                * prev_layer.get_neuron(i).get_neuron_output_weight(m_neuronIndex);
+        double value = prev_layer.get_neuron(i).get_output_value()
+        * prev_layer.get_neuron(i).get_neuron_output_weight(m_neuronIndex);
+        
+        sum += value;
+        
+        prev_layer.get_neuron(i).increase_weight_counter(m_neuronIndex, value);
         
     }
     
@@ -46,8 +50,12 @@ void Neuron::feed_forward_output(Layer &prev_layer)
     // prodju výstupy předešlé vrstvy a vynásobím s vahami propojení
     for (unsigned i = 0 ; i < prev_layer.get_neuron_count() ; i++)
     {
-        sum += prev_layer.get_neuron(i).get_output_value()
-                * prev_layer.get_neuron(i).get_neuron_output_weight(m_neuronIndex);
+        double value = prev_layer.get_neuron(i).get_output_value()
+        * prev_layer.get_neuron(i).get_neuron_output_weight(m_neuronIndex);
+        
+        sum += value;
+        
+        prev_layer.get_neuron(i).increase_weight_counter(m_neuronIndex, value);
         
     }
     
@@ -126,8 +134,21 @@ void Neuron::update_input_weights(Layer &prev_layer)
     
 }
 
+void Neuron::increase_weight_counter(unsigned weight_index, double transmitted_val)
+{
+    m_output_weights[weight_index].transmitted_value_counter += transmitted_val;
+    m_output_weights[weight_index].last_transmitted_value = transmitted_val;
+}
+
+void Neuron::increase_weight_counter_error(unsigned weight_index)
+{
+    m_output_weights[weight_index].transmitted_value_relative_error_counter += m_output_weights[weight_index].last_transmitted_value;
+}
+
 void Neuron::update_connection_values(double delta_weight)
 {
     m_output_weights[m_neuronIndex].weight = m_output_weights[m_neuronIndex].weight + delta_weight;
     m_output_weights[m_neuronIndex].delta_weight = delta_weight;
 }
+
+

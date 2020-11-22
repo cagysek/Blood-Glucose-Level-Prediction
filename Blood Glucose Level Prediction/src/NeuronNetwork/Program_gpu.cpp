@@ -237,7 +237,7 @@ void Program_gpu::run()
     int training_sets_count = m_input_values.size() / input_size;
     for (int i = 0; i < training_sets_count ; i++)
     {
-        printf("cyklus: %d\n", i);
+      //  printf("cyklus: %d\n", i);
         // přenastavíme idčka trenovacích množin
         clSetKernelArg(neural_network_setup_kernel, 0, sizeof(cl_int), &i);
         

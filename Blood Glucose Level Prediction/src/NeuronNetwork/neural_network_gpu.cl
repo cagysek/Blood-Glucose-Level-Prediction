@@ -227,7 +227,7 @@ __kernel void feed_forward_hidden_output( __global float* neural_net )
     // získání sumy neuronu a vah
     for( int j = 0; j <= NUM_HIDDEN_2; j++ )
     {
-        printf("1: %d %d %f %f\n",j ,id,neural_net[hidden_neuron_2( j )],neural_net[weight_hidden_output( j, id )] );
+    //    printf("1: %d %d %f %f\n",j ,id,neural_net[hidden_neuron_2( j )],neural_net[weight_hidden_output( j, id )] );
         
         neural_net[output_neuron( id )] += neural_net[hidden_neuron_2( j )] * neural_net[weight_hidden_output( j, id )];
         

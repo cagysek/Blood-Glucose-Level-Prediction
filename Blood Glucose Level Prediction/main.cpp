@@ -65,9 +65,9 @@ int main(int argc, const char * argv[]) {
     Program_gpu program_gpu;
     
 
-    //program.run_smp();
+    program_smp.run();
     
-    program_gpu.run();
+    //program_gpu.run();
     
     return 0;
 }

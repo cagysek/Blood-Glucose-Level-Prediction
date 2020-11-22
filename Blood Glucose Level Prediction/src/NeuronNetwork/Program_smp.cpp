@@ -48,6 +48,9 @@ Program_smp::~Program_smp()
 
 void Program_smp::run()
 {
+   
+    
+    //return;
     // predikce na 60 min
     unsigned prediction_for = 60 / 5; // intervaly jsou po 5 min, tímhle zjistím o kolik se posunout
 
@@ -66,11 +69,11 @@ void Program_smp::run()
     
     auto start = std::chrono::steady_clock::now();
     
-    unsigned stop = 1000;
+    unsigned stop = 40000;
     
     // hlavní tělo programu
     while (offset <= data->size() && offset < stop)
-   // while (offset <= data->size())
+  //  while (offset <= data->size())
     {
        // std::cout << offset << std::endl;
         
@@ -165,6 +168,11 @@ void Program_smp::run()
     std::cout << "Konec" << std::endl;
     
     
+    Output_generator output_generator;
+    
+    output_generator.generate_graph_transmitted_values(m_neuron_networks[0]);
+    output_generator.generate_graph_transmitted_values_error(m_neuron_networks[0]);
+    
     free(data);
 }
 
@@ -173,7 +181,7 @@ void Program_smp::init_neuron_networks(const std::vector<unsigned> &topology)
 {
     m_neuron_networks.clear();
     
-    unsigned neuron_network_count = 20;
+    unsigned neuron_network_count = 1;
     
     // 100 cca - 13 sec
     // 1000 cca 193 sec

@@ -25,21 +25,21 @@ class Neuron_network
         void get_results(std::vector<double> &result_values);
         double risk_function(const double x);
     
-        double get_recent_average_error(void) const { return m_recent_average_error; }
         double get_error(void) const { return m_error; }
     
         double get_average_error(void);
         double get_stanadrd_deviation(void);
-    
+        std::vector<Layer> get_layers() const { return m_layers; };
         
     
     private:
         std::vector<Layer> m_layers; // [layerNumber][neuronNumber]
         double m_error;
-        double m_recent_average_error;
-        static double m_recent_average_smoothing_factor;
+
     
         std::vector<double> m_relative_error;
+    
+        void save_transmitted_value_error();
 };
 
 

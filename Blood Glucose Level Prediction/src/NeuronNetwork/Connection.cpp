@@ -13,6 +13,9 @@ Connection::Connection()
 {
     weight = get_random_weight();
     delta_weight = 0.0;
+    transmitted_value_counter = 0.0;
+    last_transmitted_value = 0.0;
+    transmitted_value_relative_error_counter = 0.0;
 }
 
 double Connection::get_random_weight()

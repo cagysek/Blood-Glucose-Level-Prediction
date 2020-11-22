@@ -31,8 +31,14 @@ public:
     void update_input_weights(Layer &prev_layer);
     void update_connection_values(double delta_weight);
     
+    void increase_weight_counter(unsigned index, double transmitted_val);
+    void increase_weight_counter_error(unsigned index);
+    
     static double ETA; // [0.0 - 1.0] - konstanta jak moc se má síť učit, "jak moc aktuální krok ovlivní další krok"
     static double ALPHA; // momentum, násobič poslední změny váhy "jak moc minulá změna ovlivní nový krok"
+    
+    std::vector<Connection> const get_weights() { return m_output_weights; }
+    Connection const get_weight(unsigned index) { return m_output_weights[index]; }
     
     unsigned m_neuronIndex;
     double m_gradient;

@@ -9,10 +9,7 @@
 
 #include "Neuron_network.hpp"
 
-
-
-
-double Neuron_network::m_recent_average_smoothing_factor = 100.0;
+#define GRAPH_ERROR_MAX_VAL 0.15
 
 Neuron_network::Neuron_network(const std::vector<unsigned> &topology)
 {
@@ -118,15 +115,16 @@ void Neuron_network::back_propagation(const std::vector<double> &target_values, 
     double relative_error = abs(calculated_prediction - prediction_value) / prediction_value;
     
     m_relative_error.push_back(relative_error);
+    
+    if (relative_error < GRAPH_ERROR_MAX_VAL)
+    {
+        save_transmitted_value_error();
+    }
 
     // error pro backpropagation
     m_error /= output_layer.get_neuron_count() - 1;
     m_error = sqrt(m_error); // RMS
     
-    m_recent_average_error =
-                (m_recent_average_error * m_recent_average_smoothing_factor + m_error)
-                / (m_recent_average_smoothing_factor + 1.0);
-
     
     // vypočítá garient výstupů
     for (unsigned i = 0 ; i < output_layer.get_neuron_count() - 1 ; i++)
@@ -211,3 +209,15 @@ double Neuron_network::get_stanadrd_deviation()
     return sqrt(sum / (m_relative_error.size() - 1));
     
 }
+
+void Neuron_network::save_transmitted_value_error()
+{
+    for (unsigned i = 0; i < m_layers.size() - 1; i++) {
+        for (unsigned j = 0; j < m_layers[i].get_neuron_count(); j++) {
+            for (unsigned k = 0; k < m_layers[i].get_neuron_count(); k++) {
+                m_layers[i].get_neuron(j).increase_weight_counter_error(k);
+            }
+        }
+    }
+}
+
