@@ -24,7 +24,7 @@ void showVectorVals(const std::string& label, const std::vector<double> &v)
 
 Program_smp::Program_smp()
 {
-    m_data_reader.open("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood Glucose Level Prediction/data/asc2018.sqlite");
+    m_data_reader.open("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood-Glucose-Level-Prediction/data/asc2018.sqlite");
     
     // vytvoření topologie
     std::vector<unsigned> topology;

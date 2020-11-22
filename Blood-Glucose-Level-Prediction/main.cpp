@@ -58,16 +58,81 @@ void show_open_cl_info()
     free(platforms);
 }
 
+void print_help()
+{
+    printf("Spatny vstup\n");
+    printf("- Parametry: <predikce> <databaze> <0/1 pro beh na GPU>? <neural.ini>? \n");
+    printf("- Parametry s ? jsou volitelne\n");
+    printf("- Pro predikci musi platit \"predikce %% 5 = 0\" a je kladna\n");
+}
+
+
 int main(int argc, const char * argv[]) {
     
+    int prediction;
+    std::string database;
+    std::string neural_ini;
+    bool use_gpu = false;
     
-    Program_smp program_smp;
-    Program_gpu program_gpu;
+    if (argc < 3 || argc > 6)
+    {
+        print_help();
+        return 0;
+    }
     
+    try
+    {
+        prediction = std::stoi(argv[1]);
+    }
+    catch (...)
+    {
+        print_help();
+        return 0;
+    }
 
-    program_smp.run();
     
-    //program_gpu.run();
+    // kontrola že je predikce dělitelná 5 a kladne číslo
+    if (prediction > 0 && prediction % 5 != 0)
+    {
+        print_help();
+        return 0;
+    }
+    
+    // ulozim db
+    database = std::string(argv[2]);
+    
+    // kontrola kde ma program bezet
+    if (argc > 3)
+    {
+        try
+        {
+            use_gpu = std::stoi(argv[3]);
+        }
+        catch (...)
+        {
+            print_help();
+            return 0;
+        }
+    }
+    
+    // kontrola ini souboru
+    if (argc == 5)
+    {
+        neural_ini = std::string(argv[4]);
+    }
+    
+    // podle zadání kde má program běžet spustím program
+    if (use_gpu)
+    {
+        Program_gpu program_gpu;
+        program_gpu.run();
+    }
+    else
+    {
+        Program_smp program_smp;
+        program_smp.run();
+    }
+    
     
     return 0;
 }

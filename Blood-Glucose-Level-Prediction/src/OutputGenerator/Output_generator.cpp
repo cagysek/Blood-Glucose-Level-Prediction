@@ -58,11 +58,11 @@ void Output_generator::generate_graph(const Neuron_network neural_network, bool 
     
     if (show_all_transmitted_values)
     {
-        svg_file.open("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood Glucose Level Prediction/output/neural_net.svg", std::ios::out | std::ios::trunc);
+        svg_file.open("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood-Glucose-Level-Prediction/output/neural_net.svg", std::ios::out | std::ios::trunc);
     }
     else
     {
-        svg_file.open("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood Glucose Level Prediction/output/neural_net_2.svg", std::ios::out | std::ios::trunc);
+        svg_file.open("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood-Glucose-Level-Prediction/output/neural_net_2.svg", std::ios::out | std::ios::trunc);
     }
     
     
@@ -258,7 +258,7 @@ void Output_generator::generate_init_file(const Neuron_network neural_network)
 {
     std::ofstream output;
     
-    output.open("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood Glucose Level Prediction/output/neural.ini", std::ios::out | std::ios::trunc);
+    output.open("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood-Glucose-Level-Prediction/output/neural.ini", std::ios::out | std::ios::trunc);
     
     if (output.is_open())
     {
@@ -314,7 +314,7 @@ void Output_generator::generate_error_csv(Neuron_network neural_network)
 {
     std::ofstream output;
     
-    output.open("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood Glucose Level Prediction/output/error.csv", std::ios::out | std::ios::trunc);
+    output.open("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood-Glucose-Level-Prediction/output/error.csv", std::ios::out | std::ios::trunc);
     
     
     std::vector<double> errors = neural_network.get_errors();
