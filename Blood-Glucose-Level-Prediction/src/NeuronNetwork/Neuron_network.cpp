@@ -15,7 +15,7 @@ Neuron_network::Neuron_network(){}
 
 Neuron_network::Neuron_network(const std::vector<unsigned> &topology)
 {
-    unsigned number_of_layers = topology.size();
+    unsigned number_of_layers = (int)topology.size();
     
     // projdu předaný pole, kde mám strukturu
     for (unsigned layer_num = 0 ; layer_num < number_of_layers ; layer_num++)
@@ -40,7 +40,7 @@ Neuron_network::Neuron_network(const std::vector<unsigned> &topology)
 }
 
 
-void Neuron_network::feed_forward_propagation(const std::vector<double> &input_values)
+void Neuron_network::feed_forward_propagation(const std::vector<double> &input_values, bool use_backpropagation)
 {
     // na vstup přiřadím vstupní hodnoty
     for (unsigned i = 0 ; i < input_values.size() ; i++)
@@ -71,6 +71,7 @@ void Neuron_network::feed_forward_propagation(const std::vector<double> &input_v
     
     // aplikace sigmoidy na výstup
     double sum_exp = 0.0;
+    int max_index = 0;
     
     Layer output_layer = m_layers[m_layers.size() - 1];
     
@@ -84,49 +85,31 @@ void Neuron_network::feed_forward_propagation(const std::vector<double> &input_v
     for (unsigned neuron_num = 0 ; neuron_num < output_layer.get_neuron_count() - 1 ; neuron_num++)
     {
         output_layer.get_neuron(neuron_num).apply_sigmoid_function(sum_exp);
+        
+        if (!use_backpropagation)
+        {
+            if (output_layer.get_neuron(max_index).get_output_value() < output_layer.get_neuron(neuron_num).get_output_value())
+            {
+                max_index = neuron_num;
+            }
+        }
     }
+    
+    // pokud false znamená to že se načetly hrany ze souboru
+    if (!use_backpropagation)
+    {
+        printf("%f\n", Constants::Band_Index_To_Level(max_index));
+    }
+    
 }
 
 void Neuron_network::back_propagation(const std::vector<double> &target_values, double prediction_value)
 {
+    
     // RMS
     Layer &output_layer = m_layers.back();
     
-    m_error = 0.0;
-    
-    
-    unsigned biggest_value_index = 0;
-    
-    for (unsigned i = 0 ; i < output_layer.get_neuron_count() - 1 ; i++)
-    {
-        double output_value = output_layer.get_neuron(i).get_output_value();
-        
-        double delta = target_values[i] - output_value;
-        m_error += delta * delta;
-        
-        // najdeme největší pravděpodobnost -> náš výsledek
-        if (output_value > output_layer.get_neuron(biggest_value_index).get_output_value())
-        {
-            biggest_value_index = i;
-        }
-    }
-    
-    // relativní error 
-    double calculated_prediction = Constants::Band_Index_To_Level(biggest_value_index);
-    
-    double relative_error = abs(calculated_prediction - prediction_value) / prediction_value;
-    
-    m_relative_error.push_back(relative_error);
-    
-    if (relative_error < GRAPH_ERROR_MAX_VAL)
-    {
-        save_transmitted_value_error();
-    }
-
-    // error pro backpropagation
-    m_error /= output_layer.get_neuron_count() - 1;
-    m_error = sqrt(m_error); // RMS
-    
+    count_error(target_values, prediction_value);
     
     // vypočítá garient výstupů
     for (unsigned i = 0 ; i < output_layer.get_neuron_count() - 1 ; i++)
@@ -137,7 +120,7 @@ void Neuron_network::back_propagation(const std::vector<double> &target_values, 
     
     
     // gradient na hidden layers
-    for (unsigned layer_num = m_layers.size() - 2 ; layer_num > 0 ; layer_num--)
+    for (unsigned layer_num = (int)m_layers.size() - 2 ; layer_num > 0 ; layer_num--)
     {
         Layer &hidden_layer = m_layers[layer_num];
         Layer &next_layer = m_layers[layer_num + 1];
@@ -149,11 +132,9 @@ void Neuron_network::back_propagation(const std::vector<double> &target_values, 
         }
     }
     
-    //
-    
     // update vah
     
-    for (unsigned layer_num = m_layers.size() - 1 ; layer_num > 0 ; layer_num--)
+    for (unsigned layer_num = (int)m_layers.size() - 1 ; layer_num > 0 ; layer_num--)
     {
         Layer &layer = m_layers[layer_num];
         Layer &prev_layer = m_layers[layer_num - 1];
@@ -163,9 +144,46 @@ void Neuron_network::back_propagation(const std::vector<double> &target_values, 
             Neuron& neuron = layer.get_neuron(neuron_num);
             neuron.update_input_weights(prev_layer);
         }
-        
     }
     
+}
+
+void Neuron_network::count_error(const std::vector<double> &target_values, double prediction_value)
+{
+    Layer &output_layer = m_layers.back();
+    
+    m_error = 0.0;
+    
+    unsigned biggest_value_index = 0;
+    
+    for (unsigned i = 0 ; i < output_layer.get_neuron_count() - 1 ; i++)
+    {
+        double output_value = output_layer.get_neuron(i).get_output_value();
+        
+        double delta = target_values[i] - output_value;
+        m_error += delta * delta;
+        
+        if (output_value > output_layer.get_neuron(biggest_value_index).get_output_value())
+        {
+            biggest_value_index = i;
+        }
+    }
+    
+    // relativní error
+    double calculated_prediction = Constants::Band_Index_To_Level(biggest_value_index);
+    
+    double relative_error = abs(calculated_prediction - prediction_value) / prediction_value;
+    
+    m_relative_error.push_back(relative_error);
+    
+    if (relative_error < GRAPH_ERROR_MAX_VAL)
+    {
+        save_transmitted_value_error();
+    }
+    
+    // error pro backpropagation
+    m_error /= output_layer.get_neuron_count() - 1;
+    m_error = sqrt(m_error); // RMS
 }
 
 void Neuron_network::get_results(std::vector<double> &result_values)

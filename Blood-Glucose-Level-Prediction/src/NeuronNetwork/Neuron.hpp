@@ -38,10 +38,11 @@ public:
     static double ALPHA; // momentum, násobič poslední změny váhy "jak moc minulá změna ovlivní nový krok"
     
     std::vector<Connection> const get_weights() { return m_output_weights; }
-    Connection const get_weight(unsigned index) { return m_output_weights[index]; }
+    Connection& get_weight(unsigned index) { return m_output_weights[index]; }
     
     unsigned m_neuronIndex;
     double m_gradient;
+    
 private:
     double m_output;
     

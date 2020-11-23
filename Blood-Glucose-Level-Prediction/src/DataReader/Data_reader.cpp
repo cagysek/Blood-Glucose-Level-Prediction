@@ -140,21 +140,61 @@ void Data_reader::open(const char *filename)
 {
     m_database_file = filename;
     
-    int exit = 0;
-    exit = sqlite3_open(m_database_file, &m_DB);
+    int result = 0;
     
-    if (exit) {
-        std::cout << "Error open DB " << sqlite3_errmsg(m_DB) << std::endl;
+    result = sqlite3_open(filename, &m_DB);
+    
+    if (result)
+    {
+        std::cout << "Databaze nenalezena " << sqlite3_errmsg(m_DB) << std::endl;
+        exit(EXIT_FAILURE);
     }
     else
     {
-        std::cout << "Opened Database Successfully!" << std::endl;
-  
-       
+        std::cout << "Databaze pripojena!" << std::endl;
     }
 }
 
 void Data_reader::close()
 {
     sqlite3_close(m_DB);
+}
+
+std::vector<double>* Data_reader::get_ini_data(const char* filename)
+{
+    std::vector<double> *data = new std::vector<double>();
+    
+    
+    std::string line;
+    std::ifstream input (filename);
+    
+    std::string delimeter = "=";
+    
+    
+    if (input.is_open())
+    {
+        while ( getline (input,line) )
+        {
+            //std::cout << line << '\n';
+            
+            int pos = (int)line.find(delimeter);
+            
+            if (pos != std::string::npos)
+            {
+                std::string val_str = line.substr(pos + 1, line.length());
+                
+                data->push_back(std::stod(val_str));
+            }
+        }
+    }
+    else
+    {
+        std::cout << "Ini soubor neuronove site nebyl nalezen";
+        exit(EXIT_FAILURE);
+    }
+    
+    input.close();
+    
+    
+    return data;
 }

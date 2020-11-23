@@ -16,23 +16,16 @@
 #define DELTA_GRADIENT_SIZE 2048
 
 
-Program_gpu::Program_gpu()
+Program_gpu::Program_gpu(int prediction, char* database, char* ini_file)
 {
-    m_data_reader.open("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood Glucose Level Prediction/data/asc2018.sqlite");
+    m_prediction = prediction;
     
-    // vytvoření topologie
-    std::vector<unsigned> topology;
-    topology.push_back(8);
-    topology.push_back(16);
-    topology.push_back(26);
-    topology.push_back(32);
+    printf("Spoustim predpoved hodnot pro %d minut\n", prediction);
     
-    // vytvoření N neuronových sítí
-    init_neuron_networks(topology);
+    m_data_reader.open(database);
     
     // získání segmentů z db - pro lepší práci při získávání dat
     m_data_reader.init_segments(m_segments);
-    
 }
 
 Program_gpu::~Program_gpu()
@@ -43,19 +36,23 @@ Program_gpu::~Program_gpu()
 
 void Program_gpu::run()
 {
-   
+    //===== příprava trenovacích dat
     prepare_training_set();
     
-    
-    
+    //===== vytvoření polí pro hodnoty
     cl_float* neural_net = (cl_float*)malloc(sizeof(cl_float) * NEURAL_NET_SIZE);
     cl_float* training_set = (cl_float*)malloc(sizeof(cl_float) * m_input_values.size());
     cl_float* target_set = (cl_float*)malloc(sizeof(cl_float) * m_target_values.size());
     cl_float* delta_gradient = (cl_float*)malloc(sizeof(cl_float) * DELTA_GRADIENT_SIZE);
     cl_float* results = (cl_float*)malloc(sizeof(cl_float) * m_target_values.size());
+
     
+    //===== nastavení hodnot bias =======
+    neural_net[Neural_network_gpu_mapping::input_neuron(NUM_INPUT)] = 1;
+    neural_net[Neural_network_gpu_mapping::hidden_neuron_1(NUM_HIDDEN_1)] = 1;
+    neural_net[Neural_network_gpu_mapping::hidden_neuron_2(NUM_HIDDEN_2)] = 1;
     
-    
+    //===== nastaveni trenovacich dat do polí
     for(int i = 0; i < m_input_values.size(); i++)
     {
         training_set[i] = m_input_values.at(i);
@@ -65,14 +62,8 @@ void Program_gpu::run()
     {
         target_set[i] = m_target_values.at(i);
     }
-    
-    // nastavení hodnot bias
-    neural_net[Neural_network_gpu_mapping::input_neuron(NUM_INPUT)] = 1;
-    neural_net[Neural_network_gpu_mapping::hidden_neuron_1(NUM_HIDDEN_1)] = 1;
-    neural_net[Neural_network_gpu_mapping::hidden_neuron_2(NUM_HIDDEN_2)] = 1;
-    
 
-    // nastavení random vah
+    //===== nastavení random vah na hrany =======
     for (int i = 0; i <= NUM_INPUT; i++) {
         for (int j = 0; j < NUM_HIDDEN_1; j++) {
             float rand_val = get_random();
@@ -99,57 +90,50 @@ void Program_gpu::run()
             neural_net[index] = rand_val;
         }
     }
- /*
-    for (int i = 0; i < 1024; i++) {
-        printf("%d: %f \n", i,neural_net[i]);
-    }
-  */
     
     cl_int ret;
-    
-    
     
     FILE *fp;
     char *source_str;
     size_t source_size;
  
-    fp = fopen("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood Glucose Level Prediction/src/NeuronNetwork/neural_network_gpu.cl", "r");
-    if (!fp) {
-        fprintf(stderr, "Failed to load kernel.\n");
+    fp = fopen("/Users/cagy/Documents/Škola/PPR/Blood-Glucose-Level-Prediction/Blood-Glucose-Level-Prediction/src/NeuronNetwork/neural_network_gpu.cl", "r");
+    
+    if (!fp)
+    {
+        printf("Nepovedlo se nacist soubor kernelu\n");
         exit(1);
     }
+    
     source_str = (char*)malloc(MAX_SOURCE_SIZE);
     source_size = fread( source_str, 1, MAX_SOURCE_SIZE, fp);
     fclose( fp );
  
-    // Get platform and device information
+    //===== získání platformy a zařízení pro běh na gpu ======
     cl_platform_id platform_id = NULL;
     cl_device_id device_id = NULL;
     cl_uint ret_num_devices;
     cl_uint ret_num_platforms;
     
-    ret = clGetPlatformIDs(1, &platform_id, &ret_num_platforms);
-    ret = clGetDeviceIDs( platform_id, CL_DEVICE_TYPE_GPU, 1,
-            &device_id, &ret_num_devices);
-    fprintf(stdout, "Devices %d ", ret_num_devices);
-    char buf[128];
+    clGetPlatformIDs(1, &platform_id, &ret_num_platforms);
+    clGetDeviceIDs( platform_id, CL_DEVICE_TYPE_GPU, 1,&device_id, &ret_num_devices);
     
-    clGetDeviceInfo(device_id, CL_DEVICE_NAME, 128, buf, NULL);
-    fprintf(stdout, "Device %s supports ", buf);
-
-    clGetDeviceInfo(device_id, CL_DEVICE_VENDOR_ID, 128, buf, NULL);
-    fprintf(stdout, "%s\n", buf);
-        
+    if (ret_num_devices == 0)
+    {
+        printf("Zadne GPU nebylo nalezeno!\n");
+        exit(1);
+    }
+   
+    print_device(device_id);
     
-    // Create an OpenCL context
+    //===== vytvořeni OpenCL kontextu =========
     cl_context context = clCreateContext( NULL, 1, &device_id, NULL, NULL, &ret);
  
-    // Create a command queue
+    //===== vytvoření fronty požadavků ========
     cl_command_queue command_queue = clCreateCommandQueue(context, device_id, 0, &ret);
     
     
-    
-    // Create memory buffers on the device for each vector
+    //===== vytvoření bufferů =========
     cl_mem neural_net_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
             sizeof(cl_float) * NEURAL_NET_SIZE, NULL, &ret);
     cl_mem training_set_buffer = clCreateBuffer(context, CL_MEM_READ_ONLY,
@@ -161,28 +145,28 @@ void Program_gpu::run()
     cl_mem results_buffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY,
             sizeof(cl_float) * m_target_values.size(), NULL, &ret);
     
-    // zápis hodnot do bufferů
-    ret = clEnqueueWriteBuffer(command_queue, neural_net_buffer, CL_TRUE, 0,
+    //===== zápis hodnot do bufferů =======
+    clEnqueueWriteBuffer(command_queue, neural_net_buffer, CL_TRUE, 0,
            sizeof(cl_float) * NEURAL_NET_SIZE, neural_net, 0, NULL, NULL);
-    ret = clEnqueueWriteBuffer(command_queue, training_set_buffer, CL_TRUE, 0,
+    clEnqueueWriteBuffer(command_queue, training_set_buffer, CL_TRUE, 0,
            sizeof(cl_float) * m_input_values.size(), training_set, 0, NULL, NULL);
-    ret = clEnqueueWriteBuffer(command_queue, target_set_buffer, CL_TRUE, 0,
+    clEnqueueWriteBuffer(command_queue, target_set_buffer, CL_TRUE, 0,
             sizeof(cl_float) * m_target_values.size(), target_set, 0, NULL, NULL);
-    ret = clEnqueueWriteBuffer(command_queue, delta_gradient_buffer, CL_TRUE, 0,
+    clEnqueueWriteBuffer(command_queue, delta_gradient_buffer, CL_TRUE, 0,
             sizeof(cl_float) * DELTA_GRADIENT_SIZE, delta_gradient, 0, NULL, NULL);
-    ret = clEnqueueWriteBuffer(command_queue, results_buffer, CL_TRUE, 0,
+    clEnqueueWriteBuffer(command_queue, results_buffer, CL_TRUE, 0,
             sizeof(cl_float) * m_target_values.size(), results, 0, NULL, NULL);
     
      
  
-    // Create a program from the kernel source
+    //===== vytvoření programu =========
     cl_program program = clCreateProgramWithSource(context, 1,
             (const char **)&source_str, (const size_t *)&source_size, &ret);
  
-    // Build the program
+    //===== build ===========
     ret = clBuildProgram(program, 1, &device_id, NULL, NULL, NULL);
  
-    // Create the OpenCL kernel
+    //===== vytvoření kernelů =======
     cl_kernel neural_network_setup_kernel = clCreateKernel(program, "neural_network_setup", &ret);
     cl_kernel feed_forward_input_hidden_kernel = clCreateKernel(program, "feed_forward_input_hidden", &ret);
     cl_kernel feed_forward_hidden_hidden_kernel = clCreateKernel(program, "feed_forward_hidden_hidden", &ret);
@@ -193,12 +177,11 @@ void Program_gpu::run()
     cl_kernel backpropagate_hidden_input_kernel = clCreateKernel(program, "backpropagate_hidden_input", &ret);
     cl_kernel update_weights_kernel = clCreateKernel(program, "update_weights", &ret);
  
-    cl_int training_set_id = 1;
     
     
     //===== Nastavení argumentů pro kernely =======
     //  hodnot neuronove sítě
-    clSetKernelArg(neural_network_setup_kernel, 0, sizeof(cl_int), &training_set_id);
+    // clSetKernelArg(neural_network_setup_kernel, 0, sizeof(cl_int), &training_set_id); - nastavuje se ve smyčce běhu
     clSetKernelArg(neural_network_setup_kernel, 1, sizeof(cl_mem), &neural_net_buffer);
     clSetKernelArg(neural_network_setup_kernel, 2, sizeof(cl_mem), &training_set_buffer);
     
@@ -208,7 +191,7 @@ void Program_gpu::run()
     clSetKernelArg(feed_forward_hidden_output_kernel, 0, sizeof(cl_mem), &neural_net_buffer);
     
     // back propagate metody
-    clSetKernelArg(backpropagate_output_kernel, 0, sizeof(cl_int), &training_set_id);
+    // clSetKernelArg(backpropagate_output_kernel, 0, sizeof(cl_int), &training_set_id); - nastavuje se ve smyčce běhu
     clSetKernelArg(backpropagate_output_kernel, 1, sizeof(cl_mem), &neural_net_buffer);
     clSetKernelArg(backpropagate_output_kernel, 2, sizeof(cl_mem), &target_set_buffer);
     clSetKernelArg(backpropagate_output_kernel, 3, sizeof(cl_mem), &delta_gradient_buffer);
@@ -228,21 +211,27 @@ void Program_gpu::run()
     clSetKernelArg(update_weights_kernel, 0, sizeof(cl_mem), &neural_net_buffer);
     clSetKernelArg(update_weights_kernel, 1, sizeof(cl_mem), &delta_gradient_buffer);
     
-    size_t input_size = 8;
-    size_t hidden_1_size = 16;
-    size_t hidden_2_size = 26;
-    size_t output_size = 32;
+    //===== běh výpočtu
+    size_t input_size = NUM_INPUT;
+    size_t hidden_1_size = NUM_HIDDEN_1;
+    size_t hidden_2_size = NUM_HIDDEN_2;
+    size_t output_size = NUM_OUTPUT;
     
-    printf("Spouštím výpočet");
-    int training_sets_count = m_input_values.size() / input_size;
+    printf("Spouštím výpočet\n");
+    
+    int training_sets_count = (int)m_input_values.size() / input_size;
+    
+    auto start = std::chrono::steady_clock::now();
+    
+    // postupně se volají kernely, které provádí výpočet hodnot
     for (int i = 0; i < training_sets_count ; i++)
     {
-      //  printf("cyklus: %d\n", i);
         // přenastavíme idčka trenovacích množin
         clSetKernelArg(neural_network_setup_kernel, 0, sizeof(cl_int), &i);
         
         clSetKernelArg(backpropagate_output_kernel, 0, sizeof(cl_int), &i);
         
+        // volání metod
         clEnqueueNDRangeKernel(command_queue, neural_network_setup_kernel, 1, NULL,
                 &output_size, NULL, 0, NULL, NULL);
         
@@ -270,18 +259,23 @@ void Program_gpu::run()
         clEnqueueNDRangeKernel(command_queue, update_weights_kernel, 1, NULL,
                 &output_size, NULL, 0, NULL, NULL);
         
-        
-        ret = clFinish(command_queue);
+        // dokončíme výpočty před pokračováním
+        clFinish(command_queue);
     }
+    
+    auto end = std::chrono::steady_clock::now();
+    
     printf("Dokončení výpočtu\n");
     
-
-    cl_float *test = (cl_float*)malloc(sizeof(results));
-    clEnqueueReadBuffer(command_queue, results_buffer, CL_TRUE, 0, sizeof(results), test, 0, NULL, NULL);
+    printf("Doba výpočtu: %lld sec\n", std::chrono::duration_cast<std::chrono::seconds>(end - start).count());
     
+    printf("Zjišťuji error\n");
+    // načtu výsledky z bufferu
+    clEnqueueReadBuffer(command_queue, results_buffer, CL_TRUE, 0, sizeof(cl_float) * m_target_values.size(), results, 0, NULL, NULL);
+    
+    //========== výpočet erroru =========
     std::vector<float> relative_error_vector;
     
-    std::vector<double> aa;
     for (int i = 0; i < training_sets_count; i++) {
         
         unsigned max_index = 0;
@@ -289,9 +283,9 @@ void Program_gpu::run()
         // najdu max hodnotu
         for (int j = 0; j < NUM_OUTPUT ; j++)
         {
-            float output_val = test[Neural_network_gpu_mapping::results_index(i, j)];
+            float output_val = results[Neural_network_gpu_mapping::results_index(i, j)];
             
-            if (output_val > test[Neural_network_gpu_mapping::results_index(i, max_index)])
+            if (output_val > results[Neural_network_gpu_mapping::results_index(i, max_index)])
             {
                 max_index = j;
             }
@@ -304,8 +298,6 @@ void Program_gpu::run()
         float relative_error = abs(calculated_prediction - m_prediction_values_raw.at(i)) / m_prediction_values_raw.at(i);
         
         relative_error_vector.push_back(relative_error);
-        
-        //std::cout << i << ". " << test[i] << std::endl;
     }
     
     double sum = 0.0;
@@ -319,7 +311,7 @@ void Program_gpu::run()
     
     
     
-    std::cout << "Average error: " << average_error << std::endl;
+    std::cout << "Average error: " << average_error << std::endl;
     
     
     double sum2 = 0.0;
@@ -418,7 +410,7 @@ void Program_gpu::prepare_training_set()
     // pointer na všechny data z db
     std::vector<Row> *data = m_data_reader.get_data();
     
-    auto start = std::chrono::steady_clock::now();
+    
     
     unsigned stop = 1000;
     
@@ -466,8 +458,7 @@ void Program_gpu::prepare_training_set()
         counter++;
     }
     
-    auto end = std::chrono::steady_clock::now();
-    
+    free(data);
 }
 
 double Program_gpu::get_random()
@@ -477,6 +468,14 @@ double Program_gpu::get_random()
     std::uniform_real_distribution<> dis(0, 1);//uniform distribution between 0 and 1
     
     return dis(gen);
+}
+
+void Program_gpu::print_device(cl_device_id &device_id)
+{
+    char buf[128];
+    
+    clGetDeviceInfo(device_id, CL_DEVICE_NAME, 128, buf, NULL);
+    fprintf(stdout, "Vybrano zarizeni %s\n", buf);
 }
 
 

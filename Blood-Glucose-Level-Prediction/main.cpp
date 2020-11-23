@@ -60,24 +60,29 @@ void show_open_cl_info()
 
 void print_help()
 {
-    printf("Spatny vstup\n");
+    printf("Pouziti\n");
     printf("- Parametry: <predikce> <databaze> <0/1 pro beh na GPU>? <neural.ini>? \n");
     printf("- Parametry s ? jsou volitelne\n");
     printf("- Pro predikci musi platit \"predikce %% 5 = 0\" a je kladna\n");
 }
 
+void copy_argument(char*& dest, char* source)
+{
+    dest = source;
+}
 
 int main(int argc, const char * argv[]) {
     
     int prediction;
-    std::string database;
-    std::string neural_ini;
-    bool use_gpu = false;
+    char* database;
+    char* neural_ini;
+    int use_gpu = 0;
     
     if (argc < 3 || argc > 6)
     {
+        printf("Chybny pocet parametru\n");
         print_help();
-        return 0;
+        exit(EXIT_FAILURE);
     }
     
     try
@@ -86,53 +91,73 @@ int main(int argc, const char * argv[]) {
     }
     catch (...)
     {
+        printf("Chybna hodnota predikce. Predikce musi byt cele cislo\n");
         print_help();
-        return 0;
+        exit(EXIT_FAILURE);
     }
 
     
     // kontrola že je predikce dělitelná 5 a kladne číslo
     if (prediction > 0 && prediction % 5 != 0)
     {
+        printf("Chybna hodnota predikce. Predikce musi byt delitelna 5\n");
         print_help();
-        return 0;
+        exit(EXIT_FAILURE);
     }
     
     // ulozim db
-    database = std::string(argv[2]);
+    database = (char *)malloc(strlen(argv[2]) + 1);
+    strcpy(database, argv[2]);
+    
     
     // kontrola kde ma program bezet
     if (argc > 3)
     {
         try
         {
-            use_gpu = std::stoi(argv[3]);
+            int val = std::stoi(argv[3]);
+            
+            if (val == 0 || val == 1)
+            {
+                use_gpu = val;
+            }
+            else
+            {
+                printf("Chybna hodnota pouziti gpu. Hodnota musí byt 0/1\n");
+            }
+            
         }
         catch (...)
         {
+            printf("Chybna hodnota pouziti gpu. Hodnota musí byt cislo 0/1\n");
             print_help();
-            return 0;
+            exit(EXIT_FAILURE);
         }
     }
     
     // kontrola ini souboru
     if (argc == 5)
     {
-        neural_ini = std::string(argv[4]);
+        neural_ini = (char *)malloc(strlen(argv[4]) + 1);
+        strcpy(neural_ini, argv[4]);
     }
     
     // podle zadání kde má program běžet spustím program
     if (use_gpu)
     {
-        Program_gpu program_gpu;
+        printf("Vybrana platforma GPU\n");
+        Program_gpu program_gpu(prediction, database, neural_ini);
         program_gpu.run();
     }
     else
     {
-        Program_smp program_smp;
-        program_smp.run();
+        printf("Vybrana platforma CPU\n");
+        Program_smp program_smp(prediction, database, neural_ini);
+        program_smp.run(); 
     }
     
+    free(neural_ini);
+    free(database);
     
     return 0;
 }

@@ -15,6 +15,8 @@
 #include <vector>
 #include "Segment.hpp"
 #include "Row.hpp"
+#include <fstream>
+
 
 
 class Data_reader
@@ -31,6 +33,7 @@ class Data_reader
         
         std::vector<Row> *get_data();
         
+        std::vector<double> *get_ini_data(const char *filename);
     
     private:
         const char *m_database_file;

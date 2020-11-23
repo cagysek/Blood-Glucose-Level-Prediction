@@ -25,7 +25,8 @@ namespace Constants
         if (index == 0) return Low_Threshold - Half_Band_Size;
         if (index >= Band_Count - 1) return High_Threshold + Half_Band_Size;
 
-        return Low_Threshold + static_cast<double>(index - 1) * Band_Size + Half_Band_Size;
+        double val = Low_Threshold + static_cast<double>(index - 1) * Band_Size + Half_Band_Size;
+        return val;
     }
 
     /**

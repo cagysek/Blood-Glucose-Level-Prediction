@@ -30,14 +30,6 @@ namespace Neural_network_gpu_mapping {
     // mapování pro výsledky
     int expected (int training_set_id, int i) { return training_set_id * NUM_OUTPUT + i; }
 
-    // mapování pro výpočty v backpropagation
-    int delta_input_hidden(int i, int j) { return i * 16 + j; }
-    int delta_hidden_hidden(int i, int j) { return 150 + i * 26 + j; }
-    int delta_hidden_output(int i, int j) { return 600 + i * 31 + j; }
-    int error_gradient_hidden_1 (int i) { return 900 + i; }
-    int error_gradient_hidden_2 (int i) { return 920 + i; }
-    int error_gradien_output (int i) { return 950 + i; }
-
     // mapování pro výsledky
     int results_index (int entry_id, int i) { return entry_id * NUM_OUTPUT + i; }
 

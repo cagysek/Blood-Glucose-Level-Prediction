@@ -22,12 +22,16 @@ class Program_smp
 {
 public:
     
-    Program_smp();
+    Program_smp(int prediction, char* database, char* ini_file);
     ~Program_smp();
     void run();
     
 private:
     Data_reader m_data_reader;
+    int m_prediction;
+    bool use_backpropagation = true;
+    
+    char* m_ini_file;
     
     // init základních vektorů
     std::vector<Neuron_network> m_neuron_networks;
@@ -37,8 +41,9 @@ private:
     
     std::vector<Segment> m_segments;
     
-    void init_neuron_networks(const std::vector<unsigned> &topology);
+    void init_neuron_networks(const std::vector<unsigned> &topology, const unsigned neuron_networks_to_learn);
     void prepare_target_values(double prediction_value);
+    void load_neuron_network(char* ini_file);
 };
 
 #endif /* Program_hpp */

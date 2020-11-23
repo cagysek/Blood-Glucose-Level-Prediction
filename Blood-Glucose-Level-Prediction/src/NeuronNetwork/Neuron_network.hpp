@@ -21,8 +21,9 @@ class Neuron_network
         Neuron_network();
         Neuron_network(const std::vector<unsigned> &topology);
     
-        void feed_forward_propagation(const std::vector<double> &input_values);
+        void feed_forward_propagation(const std::vector<double> &input_values, bool use_backpropagation);
         void back_propagation(const std::vector<double> &target_values, double prediction_value);
+        void count_error(const std::vector<double> &target_values, double prediction_value);
         void get_results(std::vector<double> &result_values);
         double risk_function(const double x);
     
@@ -31,6 +32,7 @@ class Neuron_network
         double get_average_error(void);
         double get_stanadrd_deviation(void);
         std::vector<Layer> get_layers() const { return m_layers; };
+        Layer& get_layer(int index) { return m_layers[index]; };
         std::vector<double> get_errors() const { return m_relative_error; };
         
     

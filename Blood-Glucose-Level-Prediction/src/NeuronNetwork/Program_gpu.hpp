@@ -26,7 +26,7 @@
 class Program_gpu
 {
 public:
-    Program_gpu();
+    Program_gpu(int prediction, char* database, char* ini_file);
     ~Program_gpu();
     
     void run();
@@ -49,8 +49,9 @@ private:
     void prepare_training_set();
     void load_kernel_code();
     double get_random();
+    void print_device(cl_device_id &device_id);
     
-    
+    int m_prediction;
     
 };
 
