@@ -12,13 +12,12 @@
 #define NUM_HIDDEN_1    16
 #define NUM_HIDDEN_2    26
 #define NUM_OUTPUT      32
-#define BIAS_OFFSET     1
 
 namespace Neural_network_gpu_mapping {
     int input_neuron(const int i) { return i; }
-    int hidden_neuron_1(const int i) { return 8 + BIAS_OFFSET + i; }
-    int hidden_neuron_2(const int i) { return 24 + BIAS_OFFSET + i; }
-    int output_neuron(const int i) { return 50 + BIAS_OFFSET + i; }
+    int hidden_neuron_1(const int i) { return 9 + i; }
+    int hidden_neuron_2(const int i) { return 26 + i; }
+    int output_neuron(const int i) { return 53 + i; }
     int weight_input_hidden(const int i, const int j) { return 100 + i * 16 + j; }
     int weight_hidden_hidden(int i, int j) { return 250 + i * 26 + j; }
     int weight_hidden_output(int i, int j) { return 700 + i * 31 + j; }

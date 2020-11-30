@@ -40,11 +40,12 @@ void Program_gpu::run()
     prepare_training_set();
     
     //===== vytvoření polí pro hodnoty
-    cl_float* neural_net = (cl_float*)malloc(sizeof(cl_float) * NEURAL_NET_SIZE);
-    cl_float* training_set = (cl_float*)malloc(sizeof(cl_float) * m_input_values.size());
-    cl_float* target_set = (cl_float*)malloc(sizeof(cl_float) * m_target_values.size());
-    cl_float* delta_gradient = (cl_float*)malloc(sizeof(cl_float) * DELTA_GRADIENT_SIZE);
-    cl_float* results = (cl_float*)malloc(sizeof(cl_float) * m_target_values.size());
+    cl_float* neural_net = (cl_float*)calloc(NEURAL_NET_SIZE, sizeof(cl_float));
+    cl_float* training_set = (cl_float*)calloc(m_input_values.size(),sizeof(cl_float));
+    cl_float* target_set = (cl_float*)calloc(m_target_values.size(), sizeof(cl_float));
+    cl_float* delta_gradient = (cl_float*)calloc(DELTA_GRADIENT_SIZE,sizeof(cl_float));
+    cl_float* results = (cl_float*)calloc(m_target_values.size(),sizeof(cl_float));
+    cl_int* training_set_id = (cl_int*)calloc(1, sizeof(cl_int));
 
     
     //===== nastavení hodnot bias =======
@@ -61,7 +62,10 @@ void Program_gpu::run()
     for (int i = 0; i < m_target_values.size(); i++)
     {
         target_set[i] = m_target_values.at(i);
+        results[i] = 0;
     }
+    
+  //  training_set_id[0] = 0;
 
     //===== nastavení random vah na hrany =======
     for (int i = 0; i <= NUM_INPUT; i++) {
@@ -144,6 +148,8 @@ void Program_gpu::run()
             sizeof(cl_float) * DELTA_GRADIENT_SIZE, NULL, &ret);
     cl_mem results_buffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY,
             sizeof(cl_float) * m_target_values.size(), NULL, &ret);
+    cl_mem training_set_id_buffer = clCreateBuffer(context, CL_MEM_READ_WRITE,
+            sizeof(cl_int) * 1, NULL, &ret);
     
     //===== zápis hodnot do bufferů =======
     clEnqueueWriteBuffer(command_queue, neural_net_buffer, CL_TRUE, 0,
@@ -157,7 +163,13 @@ void Program_gpu::run()
     clEnqueueWriteBuffer(command_queue, results_buffer, CL_TRUE, 0,
             sizeof(cl_float) * m_target_values.size(), results, 0, NULL, NULL);
     
+    clEnqueueWriteBuffer(command_queue, training_set_id_buffer, CL_TRUE, 0,
+            sizeof(cl_int) * 1, training_set_id, 0, NULL, NULL);
      
+    
+    
+   
+    
  
     //===== vytvoření programu =========
     cl_program program = clCreateProgramWithSource(context, 1,
@@ -176,12 +188,13 @@ void Program_gpu::run()
     cl_kernel backpropagate_hidden_hidden_kernel = clCreateKernel(program, "backpropagate_hidden_hidden", &ret);
     cl_kernel backpropagate_hidden_input_kernel = clCreateKernel(program, "backpropagate_hidden_input", &ret);
     cl_kernel update_weights_kernel = clCreateKernel(program, "update_weights", &ret);
+    cl_kernel update_training_set_id_kernel = clCreateKernel(program, "update_training_set_id", &ret);
  
     
     
     //===== Nastavení argumentů pro kernely =======
     //  hodnot neuronove sítě
-    // clSetKernelArg(neural_network_setup_kernel, 0, sizeof(cl_int), &training_set_id); - nastavuje se ve smyčce běhu
+    clSetKernelArg(neural_network_setup_kernel, 0, sizeof(cl_mem), &training_set_id_buffer);
     clSetKernelArg(neural_network_setup_kernel, 1, sizeof(cl_mem), &neural_net_buffer);
     clSetKernelArg(neural_network_setup_kernel, 2, sizeof(cl_mem), &training_set_buffer);
     
@@ -191,7 +204,7 @@ void Program_gpu::run()
     clSetKernelArg(feed_forward_hidden_output_kernel, 0, sizeof(cl_mem), &neural_net_buffer);
     
     // back propagate metody
-    // clSetKernelArg(backpropagate_output_kernel, 0, sizeof(cl_int), &training_set_id); - nastavuje se ve smyčce běhu
+    clSetKernelArg(backpropagate_output_kernel, 0, sizeof(cl_mem), &training_set_id_buffer);
     clSetKernelArg(backpropagate_output_kernel, 1, sizeof(cl_mem), &neural_net_buffer);
     clSetKernelArg(backpropagate_output_kernel, 2, sizeof(cl_mem), &target_set_buffer);
     clSetKernelArg(backpropagate_output_kernel, 3, sizeof(cl_mem), &delta_gradient_buffer);
@@ -211,11 +224,15 @@ void Program_gpu::run()
     clSetKernelArg(update_weights_kernel, 0, sizeof(cl_mem), &neural_net_buffer);
     clSetKernelArg(update_weights_kernel, 1, sizeof(cl_mem), &delta_gradient_buffer);
     
+    
+    clSetKernelArg(update_training_set_id_kernel, 0, sizeof(cl_mem), &training_set_id_buffer);
+    
     //===== běh výpočtu
     size_t input_size = NUM_INPUT;
     size_t hidden_1_size = NUM_HIDDEN_1;
     size_t hidden_2_size = NUM_HIDDEN_2;
     size_t output_size = NUM_OUTPUT;
+    size_t training_set_size = 1;
     
     printf("Spouštím výpočet\n");
     
@@ -259,6 +276,9 @@ void Program_gpu::run()
         clEnqueueNDRangeKernel(command_queue, update_weights_kernel, 1, NULL,
                 &output_size, NULL, 0, NULL, NULL);
         
+        clEnqueueNDRangeKernel(command_queue, update_training_set_id_kernel, 1, NULL,
+                &training_set_size, NULL, 0, NULL, NULL);
+        
         // dokončíme výpočty před pokračováním
         clFinish(command_queue);
     }
@@ -270,11 +290,19 @@ void Program_gpu::run()
     printf("Doba výpočtu: %lld sec\n", std::chrono::duration_cast<std::chrono::seconds>(end - start).count());
     
     printf("Zjišťuji error\n");
+    
+    cl_float* results2 = (cl_float*)malloc(sizeof(cl_float) * m_target_values.size());
     // načtu výsledky z bufferu
-    clEnqueueReadBuffer(command_queue, results_buffer, CL_TRUE, 0, sizeof(cl_float) * m_target_values.size(), results, 0, NULL, NULL);
+    clEnqueueReadBuffer(command_queue, results_buffer, CL_TRUE, 0, sizeof(cl_float) *( m_target_values.size()), results2, 0, NULL, NULL);
     
     //========== výpočet erroru =========
     std::vector<float> relative_error_vector;
+    
+    
+    for (int i = 0; i < m_target_values.size(); i++) {
+        printf("%f\n", results2[i]);
+    }
+    
     
     for (int i = 0; i < training_sets_count; i++) {
         
@@ -378,7 +406,9 @@ void Program_gpu::init_neuron_networks(const std::vector<unsigned> &topology)
 }
 
 void Program_gpu::prepare_target_values(double prediction_value)
-{   
+{
+    unsigned start_position = (int)m_target_values.size();
+    
     // vytvořím vektor o velikosti výstupů, které představuje výstup, defaultně dám všude 0 (softmax <0;1>)
     for (unsigned i = 0 ; i < 32 ; i++)
     {
@@ -389,7 +419,7 @@ void Program_gpu::prepare_target_values(double prediction_value)
     unsigned prediction_index = Constants::Level_To_Index_Band(prediction_value);
     
     // nasadím hodnotu predikovaného výstupu na 1
-    m_target_values[prediction_index] = 1;
+    m_target_values[start_position + prediction_index] = 1;
     
     // uložíme si ještě predikovanou hodnotu pro výpočet chyby
     m_prediction_values_raw.push_back(prediction_value);
@@ -420,7 +450,7 @@ void Program_gpu::prepare_training_set()
     
     // hlavní tělo programu
   //  while (offset <= data->size() && offset < stop)
-    while (offset <= data->size())
+    while (offset <= data->size() && offset < 100)
     {
         // kolik chci predikovat + počet vstupů (chceme predikci od poslední hodnoty) - 1 (indexujeme od 0)
         prediction_index_at = offset + prediction_for + INPUT_COUNT - 1;
